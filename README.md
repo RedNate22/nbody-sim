@@ -2,6 +2,10 @@
 
 A gravitational N-body simulator, rendered in real time with raylib.
 
+## What is the N-body problem?
+
+"The n-body problem is the problem of predicting the individual motions of a group of celestial objects interacting with each other gravitationally. Solving this problem has been motivated by the desire to understand the motions of the Sun, Moon, planets, and visible stars." - [Wikipedia (n-body problem)](https://en.wikipedia.org/wiki/N-body_problem)
+
 ## Requirements
 
 - GCC (or another C99 compiler)
