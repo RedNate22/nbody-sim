@@ -27,7 +27,14 @@ static Body bodies[N];
  * gets a random position and a velocity that makes it orbit in a circle.
  */
 void init_bodies(float centerX, float centerY) {
-    bodies[0] = (Body){ centerX, centerY, 0, 0, 50000.0f, 12.0f };
+    bodies[0] = (Body){
+        centerX, 
+        centerY, 
+        0, 
+        0, 
+        50000.0f, 
+        12.0f 
+    };
 
     for (int i = 1; i < N; i ++) {
         /* Random point on a disk: pick an angle (0 to 2*PI, a full circle)
@@ -51,18 +58,29 @@ void init_bodies(float centerX, float centerY) {
 
 
 int main() {
-    InitWindow(1280, 720, "N-Body");
-    SetTargetFPS(60);
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "n-body-sim");
+
+    int monitor = 0; // your main monitor's index
+
+    Vector2 monitorPos = GetMonitorPosition(monitor);
+    int monitorWidth = GetMonitorWidth(monitor);
+    int monitorHeight = GetMonitorHeight(monitor);
+
+    int posX = (int)monitorPos.x + (monitorWidth - SCREEN_WIDTH) / 2;
+    int posY = (int)monitorPos.y + (monitorHeight - SCREEN_HEIGHT) / 2;
+
+    SetWindowPosition(posX, posY);
+    SetTargetFPS(FPS);
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
         // update_bodies(bodies, n, dt);
 
         BeginDrawing();
-        ClearBackground(BLACK);
-        // for (int i = 0; i < n; i++) {
-        //     DrawCircleV((Vector2){bodies[i].x, bodies[i].y}, bodies[i].radius, WHITE);
-        // }
+            ClearBackground(BLACK);
+            // for (int i = 0; i < n; i++) {
+            //     DrawCircleV((Vector2){bodies[i].x, bodies[i].y}, bodies[i].radius, WHITE);
+            // }
         EndDrawing();
     }
     CloseWindow();
