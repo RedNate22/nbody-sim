@@ -6,21 +6,48 @@
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 #define FPS 144
-#define N 3
+#define N 3  // no. of simulated bodies
 
-#define GRAV_CONST 6.674e-3f  // scaled up from the real constant so motion is visible
+#define GRAV_CONST 6.674e-3f  // scaled up from the real G so motion is visible
 #define SOFTENING 5.0f  // prevents divide-by-near-zero at close range
 
 typedef struct {
     float x, y;  // position
     float vx, vy;  // velocity
     float mass;
-    float radius;  // used only for drawing
+    float radius;  // rendering only
 } Body;
 
 // declare at file-scope to prevent stack overflow later
-// (sizeof(Body) * N)
 static Body bodies[N];
+
+/*
+ * Places bodies in an orbiting disk around a heavy central mass at
+ * (centerX, centerY). Body 0 is the fixed central mass; every other body
+ * gets a random position and a velocity that makes it orbit in a circle.
+ */
+void init_bodies(float centerX, float centerY) {
+    bodies[0] = (Body){ centerX, centerY, 0, 0, 50000.0f, 12.0f };
+
+    for (int i = 1; i < N; i ++) {
+        /* Random point on a disk: pick an angle (0 to 2*PI, a full circle)
+        and a distance from the center, then convert polar -> Cartesian */
+        float angle = ((float)rand() / RAND_MAX) * 2.0f * PI;
+        float radius = 50.0f + ((float)rand() / RAND_MAX) * 400.0f;
+
+        float x = centerX + cosf(angle) * radius;
+        float y = centerY + sinf(angle) * radius;
+
+        // Circular orbit speed: v = sqrt(G*M/r), from G*M*m/r^2 = m*v^2/r 
+        float speed = sqrtf(GRAV_CONST * bodies[0].mass / radius);
+
+        // perpendicular to radius, so it orbits instead of falling in
+        float vx = -sinf(angle) * speed;
+        float vy = cosf(angle) * speed;
+
+        bodies[i] = (Body){ x, y, vx, vy, 1.0f, 1.5f };
+    }
+}
 
 
 int main() {
