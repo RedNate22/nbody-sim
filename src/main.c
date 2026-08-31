@@ -178,7 +178,7 @@ int main() {
         /* Physics step number for measuring computational cost (not motion speed) */ 
         double step_start = GetTime();
         if (!paused) update_bodies(dt);
-        double step_ms = (GetTime() - step_start * 1000.0);
+        double step_ms = (GetTime() - step_start) * 1000.0;
 
         BeginDrawing();
         ClearBackground(BLACK);
