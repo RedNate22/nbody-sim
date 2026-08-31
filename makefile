@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -O2
+# CFLAGS = -std=c99 -Wall -Wextra -O2
+CFLAGS = -std=c99 -O2
 SRC = $(wildcard src/*.c)
 OUT = nbody
 

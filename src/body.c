@@ -1,14 +1,18 @@
 #include "body.h"
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 
 Body bodies[MAX_BODIES];
 int body_count = 0;
 
 const char *MODE_NAMES[MODE_COUNT] = {
     "Stars Orbiting Black Hole",
-    "PLanets Orbiting Star",
-    "Solar System"
+    "Planets Orbiting Star",
+    "Solar System",
+    "Custom Scenario"
 };
 
 /* Star colours: cool red/orange through white to hot blue-white.
@@ -145,6 +149,12 @@ static void init_solar_system(float centerX, float centerY) {
     body_count = 1 + (int)SOLAR_SYSTEM_PLANET_COUNT;
 }
 
+void assign_ids(void) {
+    for (int i = 0; i < body_count; i++) {
+        bodies[i].id = i;
+    }
+}
+
 void init_bodies(SimMode mode, float centerX, float centerY) {
     switch (mode) {
         case MODE_STARS_ORBITING_BLACKHOLE:
@@ -159,6 +169,8 @@ void init_bodies(SimMode mode, float centerX, float centerY) {
         default: 
             break;
     }
+
+    assign_ids();
 }
 
 void update_bodies(float dt) {
@@ -188,4 +200,62 @@ void update_bodies(float dt) {
         bodies[i].x  += bodies[i].vx * dt;
         bodies[i].y  += bodies[i].vy * dt;
     }
+}
+
+bool save_bodies(const char *path, const Body *src, int count, float dt, unsigned long steps_run) {
+    FILE *f = fopen(path, "wb");
+    if (!f) return false;
+
+    SnapshotHeader header;
+    header.magic = SNAPSHOT_MAGIC;
+    header.version = SNAPSHOT_VERSION;
+    header.body_count = count;
+    header.dt = dt;
+    header.steps_run = (uint64_t)steps_run;
+
+    bool ok = fwrite(&header, sizeof(header), 1, f) == 1;
+    if (ok && count > 0) {
+        ok = fwrite(src, sizeof(Body), (size_t)count, f) == (size_t)count;
+    }
+
+    fclose(f);
+    return ok;
+}
+
+bool load_bodies(const char *path, Body *dest, int *count_out, SnapshotHeader *header_out) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+
+    SnapshotHeader header;
+    if (fread(&header, sizeof(header), 1, f) != 1) {
+        fclose(f);
+        return false;
+    }
+    if (header.magic != SNAPSHOT_MAGIC) {
+        fprintf(stderr, "%s: not a valid scenario file\n", path);
+        fclose(f);
+        return false;
+    }
+    if (header.version != SNAPSHOT_VERSION) {
+        fprintf(stderr, "%s: unsupported scenario version %u\n", path, header.version);
+        fclose(f);
+        return false;
+    }
+    if (header.body_count < 0 || header.body_count > MAX_BODIES) {
+        fprintf(stderr, "%s: body count %d out of range\n", path, header.body_count);
+        fclose(f);
+        return false;
+    }
+
+    bool ok = true;
+    if (header.body_count > 0) {
+        ok = fread(dest, sizeof(Body), (size_t)header.body_count, f) == (size_t)header.body_count;
+    }
+    fclose(f);
+
+    if (ok) {
+        *count_out = header.body_count;
+        if (header_out) *header_out = header;
+    }
+    return ok;
 }
