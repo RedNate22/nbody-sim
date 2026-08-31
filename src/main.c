@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "raylib.h"
 #include "raymath.h"
 #include "body.h"
@@ -5,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
@@ -71,6 +73,12 @@ static void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
     }
 }
 
+static double now_seconds(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+}
+
 static int run_headless_benchmark(const CliOptions *opt) {
     if (opt->scenario_path) {
         int count;
@@ -84,9 +92,22 @@ static int run_headless_benchmark(const CliOptions *opt) {
         init_bodies((SimMode)opt->mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
     }
 
+    unsigned long progress_interval = opt->steps / 10;
+    if (progress_interval == 0) progress_interval = 1;
+
+    double start_time = now_seconds();
+
     for (unsigned long i = 0; i < opt->steps; i++) {
         update_bodies(opt->dt);
+
+        if ((i + 1) % progress_interval == 0 || i + 1 == opt->steps) {
+            double elapsed = now_seconds() - start_time;
+            printf("step %lu / %lu (%.0f%%), %.2fs elapsed\n", i + 1, opt->steps,
+                100.0 * (double)(i + 1) / (double)opt->steps, elapsed);
+        }
     }
+
+    double total_time = now_seconds() - start_time;
 
     const char *out_path = opt->out_path ? opt->out_path : "output.nbs";
     if (!save_bodies(out_path, bodies, body_count, opt->dt, opt->steps)) {
@@ -94,8 +115,10 @@ static int run_headless_benchmark(const CliOptions *opt) {
         return 1;
     }
 
-    printf("ran %lu steps at dt=%g, wrote %d bodies to %s\n",
-        opt->steps, opt->dt, body_count, out_path);
+    double steps_per_sec = total_time > 0.0 ? (double)opt->steps / total_time : 0.0;
+    printf("ran %lu steps at dt=%g in %.3fs (%.1f steps/sec), wrote %d bodies to %s\n",
+        opt->steps, opt->dt, total_time, steps_per_sec, body_count, out_path);
+
     return 0;
 }
 
