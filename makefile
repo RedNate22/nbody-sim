@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -std=c99 -Wall -Wextra -O2
-SRC = src/main.c
+SRC = $(wildcard *.c)
 OUT = nbody
 
 ifeq ($(OS),Windows_NT)
