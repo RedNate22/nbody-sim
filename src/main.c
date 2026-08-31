@@ -10,6 +10,8 @@
 
 #define GRAV_CONST 6.674e-3f  // scaled up from the real G so motion is visible
 #define SOFTENING 5.0f  // prevents divide-by-near-zero at close range
+#define PLANET_MASS_MIN 1.0f
+#define PLANET_MASS_MAX 400.0f
 
 typedef struct {
     float x, y;  // position
@@ -70,21 +72,25 @@ void init_bodies(float centerX, float centerY) {
         float x = centerX + cosf(angle) * radius;
         float y = centerY + sinf(angle) * radius;
 
-        /* Circular orbit speed: v = sqrt(G*M/r) */ 
+        /* Circular orbit speed around the SUN specifically: v = sqrt(G*M/r) 
+        this is an approximation, since nearby heavy planets will perturb it further */ 
         float speed = sqrtf(GRAV_CONST * bodies[0].mass / radius);
 
         /* perpendicular to radius, so it orbits instead of falling in */
         float vx = -sinf(angle) * speed;
         float vy = cosf(angle) * speed;
 
+        float mass = PLANET_MASS_MIN + ((float)rand() / RAND_MAX) * (PLANET_MASS_MAX - PLANET_MASS_MIN);
+        /* bigger mass drawn as a bigger circle, so gas giants are visually obvious */
+        float draw_radius = 1.0f + 2.5f * (mass - PLANET_MASS_MIN) / (PLANET_MASS_MAX - PLANET_MASS_MIN);
         Color color = STAR_COLORS[rand() % STAR_COLOR_COUNT];
         bodies[i] = (Body) { 
             x, 
             y, 
             vx, 
             vy, 
-            1.0f, 
-            1.5f,
+            mass, 
+            draw_radius,
             color
         };
     }
