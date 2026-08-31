@@ -6,7 +6,7 @@
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
 #define FPS 60
-#define N 50  // no. of simulated bodies
+#define N 1200
 
 #define GRAV_CONST 6.674e-3f  // scaled up from the real G so motion is visible
 #define SOFTENING 5.0f  // prevents divide-by-near-zero at close range
@@ -16,7 +16,19 @@ typedef struct {
     float vx, vy;  // velocity
     float mass;
     float radius;  // rendering only
+    Color color;
 } Body;
+
+/* Rough star colours across the temperature spectrum: cool red/orage
+through white to hot blue-white */
+static const Color STAR_COLORS[] = {
+    (Color){255, 180, 120, 255},  // cool orange
+    (Color){255, 214, 170, 255},  // warm white
+    (Color){255, 244, 214, 255},  // yellow-white, sun-like
+    (Color){255, 255, 255, 255},  // white
+    (Color){202, 216, 255, 255},  // blue-white, hot
+};
+#define STAR_COLOR_COUNT (sizeof(STAR_COLORS) / sizeof(STAR_COLORS[0]))
 
 // declare at file-scope to prevent stack overflow later
 static Body bodies[N];
@@ -44,7 +56,8 @@ void init_bodies(float centerX, float centerY) {
         0, 
         0, 
         50000.0f, 
-        12.0f 
+        12.0f,
+        (Color){255, 244, 214, 255}
     };
 
     for (int i = 1; i < N; i ++) {
@@ -64,13 +77,15 @@ void init_bodies(float centerX, float centerY) {
         float vx = -sinf(angle) * speed;
         float vy = cosf(angle) * speed;
 
+        Color color = STAR_COLORS[rand() % STAR_COLOR_COUNT];
         bodies[i] = (Body) { 
             x, 
             y, 
             vx, 
             vy, 
             1.0f, 
-            1.5f 
+            1.5f,
+            color
         };
     }
 }
@@ -166,7 +181,7 @@ int main() {
                 bodies[i].x, 
                 bodies[i].y}, 
                 bodies[i].radius, 
-                WHITE);
+                bodies[i].color);
         }
 
         DrawFPS(10, 10);
