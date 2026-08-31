@@ -73,12 +73,28 @@ static const PlanetSpec SOLAR_SYSTEM_PLANETS[] = {
 };
 #define SOLAR_SYSTEM_PLANET_COUNT (sizeof(SOLAR_SYSTEM_PLANETS) / sizeof(SOLAR_SYSTEM_PLANETS[0]))
 
-/* Shared helper: circular orbit speed v = sqrt(G*M/r), derived from
-   G*M*m/r^2 = m*v^2/r with the orbiting body's own mass cancelling out. */
+/**
+ * Computes the speed required for a stable circular orbit.
+ *
+ * @param centralMass Mass of the body being orbited.
+ * @param radius Orbital radius.
+ * @return Orbital speed, derived from G*M*m/r^2 = m*v^2/r with the
+ *         orbiting body's own mass cancelling out.
+ */
 static float orbital_speed(float centralMass, float radius) {
     return sqrtf(GRAV_CONST * centralMass / radius);
 }
 
+/**
+ * Generates the stars orbiting a black hole scenario.
+ *
+ * @param centerX X coordinate of the central black hole.
+ * @param centerY Y coordinate of the central black hole.
+ *
+ * Fills bodies[0] with the black hole and every remaining slot up to
+ * MAX_BODIES with a randomly placed star on a circular orbit around it.
+ * Sets body_count to MAX_BODIES.
+ */
 static void init_stars_orbiting_blackhole(float centerX, float centerY) {
     bodies[0] = (Body){ centerX, centerY, 0, 0, 150000.0f, 22.0f, (Color){25, 15, 35, 255} };
 
@@ -104,6 +120,16 @@ static void init_stars_orbiting_blackhole(float centerX, float centerY) {
     body_count = MAX_BODIES;
 }
 
+/**
+ * Generates the planets orbiting a star scenario.
+ *
+ * @param centerX X coordinate of the central star.
+ * @param centerY Y coordinate of the central star.
+ *
+ * Fills bodies[0] with the star and every remaining slot up to
+ * MAX_BODIES with a randomly placed planet on a circular orbit around
+ * it. Sets body_count to MAX_BODIES.
+ */
 static void init_planets_orbiting_star(float centerX, float centerY) {
     bodies[0] = (Body){ centerX, centerY, 0, 0, 50000.0f, 18.0f, (Color){255, 244, 214, 255} };
 
@@ -129,6 +155,17 @@ static void init_planets_orbiting_star(float centerX, float centerY) {
     body_count = MAX_BODIES;
 }
 
+/**
+ * Generates the solar system scenario.
+ *
+ * @param centerX X coordinate of the central star.
+ * @param centerY Y coordinate of the central star.
+ *
+ * Fills bodies[0] with the star and one slot per entry in
+ * SOLAR_SYSTEM_PLANETS, each placed at a random angle at its specified
+ * (compressed) distance with a circular orbit speed. Sets body_count to
+ * one plus SOLAR_SYSTEM_PLANET_COUNT.
+ */
 static void init_solar_system(float centerX, float centerY) {
     bodies[0] = (Body){ centerX, centerY, 0, 0, 50000.0f, 22.0f, (Color){255, 244, 214, 255} };
 
@@ -149,12 +186,29 @@ static void init_solar_system(float centerX, float centerY) {
     body_count = 1 + (int)SOLAR_SYSTEM_PLANET_COUNT;
 }
 
+/**
+ * Assigns a stable id to every active body.
+ *
+ * Sets bodies[i].id to i for every i in [0, body_count). Called after
+ * generating a new scenario so every body can be identified later, for
+ * example by hover inspection or when matching bodies between two saved
+ * files.
+ */
 void assign_ids(void) {
     for (int i = 0; i < body_count; i++) {
         bodies[i].id = i;
     }
 }
 
+/**
+ * Populates bodies[] and body_count for the given scenario.
+ *
+ * @param mode Which built in scenario to generate. MODE_CUSTOM is not
+ *             handled here, loading a scenario from disk is done
+ *             separately with load_bodies.
+ * @param centerX X coordinate to center the generated scenario on.
+ * @param centerY Y coordinate to center the generated scenario on.
+ */
 void init_bodies(SimMode mode, float centerX, float centerY) {
     switch (mode) {
         case MODE_STARS_ORBITING_BLACKHOLE:
@@ -173,6 +227,15 @@ void init_bodies(SimMode mode, float centerX, float centerY) {
     assign_ids();
 }
 
+/**
+ * Advances the simulation by one timestep.
+ *
+ * @param dt Size of the timestep to integrate over.
+ *
+ * Computes the combined gravitational acceleration on every body from
+ * every other body by direct pairwise summation, then integrates
+ * velocity and position forward using explicit Euler integration.
+ */
 void update_bodies(float dt) {
     float ax[MAX_BODIES], ay[MAX_BODIES];
 
@@ -202,6 +265,19 @@ void update_bodies(float dt) {
     }
 }
 
+/**
+ * Writes an array of bodies to a binary scenario file.
+ *
+ * @param path File path to write to.
+ * @param src Array of bodies to write.
+ * @param count Number of bodies in src.
+ * @param dt Timestep the bodies were produced with, recorded in the file
+ *           header for reference only.
+ * @param steps_run Number of steps already applied to these bodies,
+ *                  recorded in the file header for reference only.
+ * @return true if the file was written successfully, false if it could
+ *         not be opened or the write did not complete.
+ */
 bool save_bodies(const char *path, const Body *src, int count, float dt, unsigned long steps_run) {
     FILE *f = fopen(path, "wb");
     if (!f) return false;
@@ -222,6 +298,19 @@ bool save_bodies(const char *path, const Body *src, int count, float dt, unsigne
     return ok;
 }
 
+/**
+ * Reads an array of bodies from a binary scenario file.
+ *
+ * @param path File path to read from.
+ * @param dest Array to read bodies into. Must be large enough to hold
+ *             the file's body count, up to MAX_BODIES.
+ * @param count_out Set to the number of bodies read on success.
+ * @param header_out If not NULL, receives the full snapshot header on
+ *                    success.
+ * @return true on success. false if the file is missing, is not a valid
+ *         scenario file, has an unsupported version, or has a body count
+ *         out of range, in which case dest is left untouched.
+ */
 bool load_bodies(const char *path, Body *dest, int *count_out, SnapshotHeader *header_out) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;

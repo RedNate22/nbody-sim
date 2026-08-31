@@ -25,6 +25,14 @@ typedef struct {
     float tol;
 } CliOptions;
 
+/**
+ * Checks whether arg matches the pattern "--flag=value".
+ *
+ * @param arg The argv string being checked.
+ * @param flag The flag name to match, including its leading "--".
+ * @param out_value Set to point at the text after '=' when arg matches flag.
+ * @return true if arg starts with flag followed by '=', false otherwise.
+ */
 static bool arg_value(const char *arg, const char *flag, const char **out_value) {
     size_t flag_len = strlen(flag);
     if (strncmp(arg, flag, flag_len) != 0) return false;
@@ -33,6 +41,15 @@ static bool arg_value(const char *arg, const char *flag, const char **out_value)
     return true;
 }
 
+/**
+ * Parses command line arguments into a CliOptions struct.
+ *
+ * @param argc Argument count, as passed to main.
+ * @param argv Argument vector, as passed to main.
+ * @param opt Filled with default values, then overridden by any recognized
+ *            flags found in argv. Unrecognized arguments are printed to
+ *            stderr and otherwise ignored.
+ */
 static void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
     opt->headless = false;
     opt->compare = false;
@@ -73,12 +90,30 @@ static void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
     }
 }
 
+/**
+ * Reads the current monotonic clock time.
+ *
+ * @return Elapsed time in seconds since an unspecified fixed point,
+ *         suitable only for measuring differences between two calls.
+ */
 static double now_seconds(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
+/**
+ * Runs the simulation with no window, for scripted or automated testing.
+ *
+ * @param opt Parsed options. If opt->scenario_path is set, bodies are
+ *            loaded from that file, otherwise a scenario is generated
+ *            using opt->mode. The simulation is then advanced opt->steps
+ *            times at fixed dt opt->dt, with progress printed every 10%
+ *            of the run, before the resulting bodies are written to
+ *            opt->out_path.
+ * @return 0 on success, 1 if the scenario could not be loaded or the
+ *         result could not be written.
+ */
 static int run_headless_benchmark(const CliOptions *opt) {
     if (opt->scenario_path) {
         int count;
@@ -125,6 +160,17 @@ static int run_headless_benchmark(const CliOptions *opt) {
 static Body diff_bodies_a[MAX_BODIES];
 static Body diff_bodies_b[MAX_BODIES];
 
+/**
+ * Compares two saved result files body by body.
+ *
+ * @param opt Parsed options. opt->compare_a and opt->compare_b name the
+ *            two files to load, opt->tol is the largest position
+ *            difference allowed before a body is reported as failing.
+ * @return 0 if both files loaded, had matching body counts, and every
+ *         body's position difference was within opt->tol. 1 if either
+ *         file failed to load, the body counts differ, or the tolerance
+ *         was exceeded.
+ */
 static int run_diff(const CliOptions *opt) {
     int count_a, count_b;
     SnapshotHeader header_a, header_b;
@@ -179,6 +225,15 @@ static int run_diff(const CliOptions *opt) {
     return within_tol ? 0 : 1;
 }
 
+/**
+ * Program entry point.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return Exit code: the result of run_diff or run_headless_benchmark
+ *         when invoked headlessly, or 0 after the interactive window is
+ *         closed normally.
+ */
 int main(int argc, char *argv[]) {
     SetTraceLogLevel(LOG_WARNING);  // suppress the countless "INFO:" dumps on run
 
