@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "raymath.h"
 #include "body.h"
 #include <stdio.h>
 
@@ -26,6 +27,12 @@ int main() {
     bool paused = false;
     char info_text[128];
 
+    Camera2D camera = { 0 };
+    camera.target = (Vector2){ SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+    camera.offset = (Vector2){ SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+    camera.rotation = 0.0f;
+    camera.zoom = 1.0f;
+
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_SPACE)) paused = !paused;
         if (IsKeyPressed(KEY_R)) {
@@ -44,6 +51,25 @@ int main() {
             mode = MODE_SOLAR_SYSTEM;
             init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
         }
+        
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            Vector2 delta = GetMouseDelta();
+            delta = Vector2Scale(delta, -1.0f / camera.zoom);
+            camera.target = Vector2Add(camera.target, delta);
+        }
+
+        float wheel = GetMouseWheelMove();
+        if (wheel != 0) {
+            Vector2 mouseWorldBefore = GetScreenToWorld2D(GetMousePosition(), camera);
+
+            camera.zoom += wheel * 0.1f * camera.zoom;
+            if (camera.zoom < 0.1f) camera.zoom = 0.1f;
+            if (camera.zoom > 10.0f) camera.zoom = 10.0f;
+
+            Vector2 mouseWorldAfter = GetScreenToWorld2D(GetMousePosition(), camera);
+            camera.target = Vector2Add(camera.target,
+                Vector2Subtract(mouseWorldBefore, mouseWorldAfter));
+        }
 
         /* keep animation consistent regardless of frame rate */
         float dt = GetFrameTime();  
@@ -54,6 +80,7 @@ int main() {
         double step_ms = (GetTime() - step_start) * 1000.0;
 
         BeginDrawing();
+        BeginMode2D(camera);
         ClearBackground(BLACK);
         for (int i = 0; i < body_count; i++) {
             DrawCircleV((Vector2) {
@@ -62,6 +89,7 @@ int main() {
                 bodies[i].radius, 
                 bodies[i].color);
         }
+        EndMode2D();
 
         DrawFPS(10, 10);
         snprintf(info_text, sizeof(info_text),
