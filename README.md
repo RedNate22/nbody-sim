@@ -12,8 +12,6 @@ Two bodies have an exact solution, an orbit shaped like an ellipse. Three or mor
 
 This is a real time 2D gravitational simulator. Each frame, every body's combined gravitational pull on every other body is calculated directly, then used to update velocities and positions with simple Euler integration. Distances, masses, and the gravitational constant are all arbitrary units tuned for visible motion on screen rather than realistic scale, and a small softening term keeps the force from spiking when two bodies pass very close to each other.
 
-Three built in scenarios are included: stars orbiting a black hole, planets orbiting a star, and a rough solar system with the real planets in order but not their real distances or masses. A fourth mode loads a previously saved custom scenario, described in Command line usage below.
-
 ## Requirements
 
 - GCC (or another C99 compiler)
