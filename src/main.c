@@ -10,7 +10,6 @@ int main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "n-body-sim");
 
     int monitor = 0;
-
     Vector2 monitorPos = GetMonitorPosition(monitor);
     int monitorWidth = GetMonitorWidth(monitor);
     int monitorHeight = GetMonitorHeight(monitor);
@@ -21,7 +20,8 @@ int main() {
     SetWindowPosition(posX, posY);
     SetTargetFPS(FPS);
 
-    init_bodies(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+    SimMode mode = MODE_STARS_ORBITING_BLACKHOLE;
+    init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
 
     bool paused = false;
     char info_text[128];
@@ -29,7 +29,20 @@ int main() {
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_SPACE)) paused = !paused;
         if (IsKeyPressed(KEY_R)) {
-            init_bodies(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+        }
+
+        if (IsKeyPressed(KEY_ONE)) {
+            mode = MODE_STARS_ORBITING_BLACKHOLE;
+            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+        }
+        if (IsKeyPressed(KEY_TWO)) {
+            mode = MODE_PLANETS_ORBITING_STAR;
+            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+        }
+        if (IsKeyPressed(KEY_THREE)) {
+            mode = MODE_SOLAR_SYSTEM;
+            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
         }
 
         /* keep animation consistent regardless of frame rate */
@@ -42,7 +55,7 @@ int main() {
 
         BeginDrawing();
         ClearBackground(BLACK);
-        for (int i = 0; i < N; i++) {
+        for (int i = 0; i < body_count; i++) {
             DrawCircleV((Vector2) {
                 bodies[i].x, 
                 bodies[i].y}, 
@@ -51,16 +64,12 @@ int main() {
         }
 
         DrawFPS(10, 10);
-        snprintf(
-            info_text, 
-            sizeof(info_text), 
-            "Bodies: %d   Physics step: %.2f ms   %s",
-            N, step_ms, 
-            paused ? "(PAUSED)" : "");
+        snprintf(info_text, sizeof(info_text),
+            "%s   Bodies: %d   Physics step: %.2f ms   %s",
+            MODE_NAMES[mode], body_count, step_ms, paused ? "(PAUSED)" : "");
         DrawText(info_text, 10, 35, 20, RAYWHITE);
-        DrawText("SPACE: pause   R: reset", 
-            10, SCREEN_HEIGHT - 30, 
-            18, GRAY);
+        DrawText("SPACE: pause   R: reset   1/2/3: switch scenario",
+            10, SCREEN_HEIGHT - 30, 18, GRAY);
 
         EndDrawing();
     }
