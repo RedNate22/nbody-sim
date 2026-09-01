@@ -7,9 +7,10 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
 
-#define SCREEN_WIDTH 1920
-#define SCREEN_HEIGHT 1080
+#define DEFAULT_SCREEN_WIDTH 1920
+#define DEFAULT_SCREEN_HEIGHT 1080
 #define FPS 60
 
 typedef struct {
@@ -114,7 +115,7 @@ static double now_seconds(void) {
  * @return 0 on success, 1 if the scenario could not be loaded or the
  *         result could not be written.
  */
-static int run_headless_benchmark(const CliOptions *opt) {
+static int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_height) {
     if (opt->scenario_path) {
         int count;
         SnapshotHeader header;
@@ -124,7 +125,7 @@ static int run_headless_benchmark(const CliOptions *opt) {
         }
         body_count = count;
     } else {
-        init_bodies((SimMode)opt->mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+        init_bodies((SimMode)opt->mode, screen_width / 2.0f, screen_height / 2.0f);
     }
 
     unsigned long progress_interval = opt->steps / 10;
@@ -245,31 +246,32 @@ int main(int argc, char *argv[]) {
     }
 
     if (opt.headless) {
-        return run_headless_benchmark(&opt);
+        return run_headless_benchmark(&opt, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
     }
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "n-body-sim");
+    InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT, "n-body-sim");  // placeholder, resized below
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     int monitor = 0;
     Vector2 monitorPos = GetMonitorPosition(monitor);
-    int monitorWidth = GetMonitorWidth(monitor);
-    int monitorHeight = GetMonitorHeight(monitor);
+    int screen_width = GetMonitorWidth(monitor);
+    int screen_height = GetMonitorHeight(monitor);
 
-    int posX = (int)monitorPos.x + (monitorWidth - SCREEN_WIDTH) / 2;
-    int posY = (int)monitorPos.y + (monitorHeight - SCREEN_HEIGHT) / 2;
+    SetWindowPosition((int)monitorPos.x, (int)monitorPos.y);
 
-    SetWindowPosition(posX, posY);
     SetTargetFPS(FPS);
+    int refresh_rate = GetMonitorRefreshRate(monitor);
+    printf(" refresh rate: %d\n", refresh_rate);
 
     SimMode mode = MODE_STARS_ORBITING_BLACKHOLE;
-    init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+    init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
 
     bool paused = false;
     char info_text[128];
 
     Camera2D camera = { 0 };
-    camera.target = (Vector2){ SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
-    camera.offset = (Vector2){ SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+    camera.target = (Vector2){ screen_width / 2.0f, screen_height / 2.0f };
+    camera.offset = (Vector2){ screen_width / 2.0f, screen_height / 2.0f };
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
 
@@ -278,20 +280,20 @@ int main(int argc, char *argv[]) {
     while (!WindowShouldClose()) {
         if (IsKeyPressed(KEY_SPACE)) paused = !paused;
         if (IsKeyPressed(KEY_R)) {
-            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
         }
 
         if (IsKeyPressed(KEY_ONE)) {
             mode = MODE_STARS_ORBITING_BLACKHOLE;
-            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
         }
         if (IsKeyPressed(KEY_TWO)) {
             mode = MODE_PLANETS_ORBITING_STAR;
-            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
         }
         if (IsKeyPressed(KEY_THREE)) {
             mode = MODE_SOLAR_SYSTEM;
-            init_bodies(mode, SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
         }
         if (IsKeyPressed(KEY_FOUR)) {
             int count;
@@ -379,9 +381,10 @@ int main(int argc, char *argv[]) {
             MODE_NAMES[mode], body_count, step_ms, paused ? "(PAUSED)" : "");
         DrawText(info_text, 10, 35, 20, RAYWHITE);
         DrawText("SPACE: pause   R: reset   1/2/3: switch scenario   4: custom scenario   S: save scenario",
-            10, SCREEN_HEIGHT - 30, 18, GRAY);
+            10, screen_height - 30, 18, GRAY);
 
         EndDrawing();
+        MaximizeWindow();
     }
     CloseWindow();
     return 0;
