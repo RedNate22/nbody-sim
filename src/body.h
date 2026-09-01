@@ -15,12 +15,12 @@
 #define SCENARIO_DEFAULT_PATH "scenario.nbs"
 
 typedef struct {
-    float x, y;  // position
-    float vx, vy;  // velocity
-    float mass;
-    float radius;  // rendering only
-    Color color;
-    int id;
+  float x, y;   // position
+  float vx, vy; // velocity
+  float mass;
+  float radius; // rendering only
+  Color color;
+  int id;
 } Body;
 
 typedef struct {
