@@ -32,6 +32,7 @@ typedef struct {
   uint32_t magic;
   uint32_t version;
   int32_t body_count;
+  int32_t source_mode;
 
   // both 0 for a fresh scenario
   float dt;
@@ -55,8 +56,8 @@ void init_bodies(SimMode mode, float centerX, float centerY);
 void update_bodies(float dt);
 void assign_ids(void);
 
-bool save_bodies(const char *path, const Body *src, int count, float dt,
-                 unsigned long steps_run);
+bool save_bodies(const char *path, const Body *src, int count,
+                 SimMode source_mode, float dt, unsigned long steps_run);
 bool load_bodies(const char *path, Body *dest, int *count_out,
                  SnapshotHeader *header_out);
 

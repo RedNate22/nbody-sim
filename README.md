@@ -14,7 +14,7 @@ This is a real time 2D gravitational simulator. Each frame, every body's combine
 
 Distance is measured in world units (40 units = 1 AU), mass in solar masses, and time in simulated days, using the real gravitational constant for this unit system (the square of the Gaussian gravitational constant, rescaled for world-unit distances). Orbital periods and relative speeds match real physics. Rendered body radii are stylized for visibility rather than to scale, and a softening term caps the gravitational force at very close range for numerical stability.
 
-Real orbital periods range from 88 days (Mercury) to over 160 years (Neptune), so the interactive display advances simulated time faster than real time (`TIME_SCALE` in `main.c`).
+Real orbital periods range from 88 days (Mercury) to over 160 years (Neptune), so the interactive display advances simulated time faster than real time, at a pace set independently per scenario (`SCENARIO_1_TIME_SCALE`, `SCENARIO_2_TIME_SCALE`, `SCENARIO_3_TIME_SCALE` in `main.c`).
 
 The stars-orbiting-a-black-hole scenario places bodies with uniform-by-area disc sampling and derives each body's orbital velocity from the mass enclosed within its orbit, rather than the central mass alone, with total disc mass scaled to body count. This keeps the scenario stable at high body counts, where orbiting mass is no longer negligible next to the central mass.
 
@@ -105,7 +105,7 @@ Running `./nbody` with no arguments opens the interactive window as above. A set
 
 ### Scenario files
 
-Any built-in scenario, or whatever is currently running in the interactive window, can be saved to a `.nbs` file, a binary snapshot of every body's exact position, velocity, mass, and id. Loading that file back reproduces the exact same starting conditions, with no randomness and no precision loss from the save and load round trip. These files are a raw dump of memory, so they're tied to the compiler and machine that produced them and shouldn't be copied between different platforms.
+Any built-in scenario, or whatever is currently running in the interactive window, can be saved to a `.nbs` file, a binary snapshot of every body's exact position, velocity, mass, and id. The file also records which scenario it was generated from, so loading it back resumes at that scenario's time scale. Loading that file back reproduces the exact same starting conditions, with no randomness and no precision loss from the save and load round trip. These files are a raw dump of memory, so they're tied to the compiler and machine that produced them and shouldn't be copied between different platforms.
 
 ### Flags
 

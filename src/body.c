@@ -46,6 +46,8 @@ static const Color PLANET_COLORS[] = {
 #define PLANET_DRAW_MIN 3.0f
 #define PLANET_DRAW_MAX 8.0f
 
+#define PLANETS_ORBITING_STAR_COUNT 15
+
 typedef struct {
     float distance;
     float mass;
@@ -157,9 +159,9 @@ static void init_stars_orbiting_blackhole(float centerX, float centerY) {
 static void init_planets_orbiting_star(float centerX, float centerY) {
     bodies[0] = (Body){ centerX, centerY, 0, 0, 1.0f, 18.0f, (Color){255, 244, 214, 255} };
 
-    for (int i = 1; i < MAX_BODIES; i++) {
+    for (int i = 1; i <= PLANETS_ORBITING_STAR_COUNT; i++) {
         float angle  = ((float)rand() / RAND_MAX) * 2.0f * PI;
-        float radius = 50.0f + ((float)rand() / RAND_MAX) * 400.0f;
+        float radius = 50.0f + ((float)rand() / RAND_MAX) * 850.0f;
 
         float x = centerX + cosf(angle) * radius;
         float y = centerY + sinf(angle) * radius;
@@ -176,7 +178,7 @@ static void init_planets_orbiting_star(float centerX, float centerY) {
         bodies[i] = (Body){ x, y, vx, vy, mass, draw_radius, color };
     }
 
-    body_count = MAX_BODIES;
+    body_count = 1 + PLANETS_ORBITING_STAR_COUNT;
 }
 
 /**
@@ -295,6 +297,9 @@ void update_bodies(float dt) {
  * @param path File path to write to.
  * @param src Array of bodies to write.
  * @param count Number of bodies in src.
+ * @param source_mode Which built-in scenario these bodies were generated
+ *                     from, recorded in the file header so a later load
+ *                     can restore mode-specific behavior (e.g. time scale).
  * @param dt Timestep the bodies were produced with, recorded in the file
  *           header for reference only.
  * @param steps_run Number of steps already applied to these bodies,
@@ -302,7 +307,7 @@ void update_bodies(float dt) {
  * @return true if the file was written successfully, false if it could
  *         not be opened or the write did not complete.
  */
-bool save_bodies(const char *path, const Body *src, int count, float dt, unsigned long steps_run) {
+bool save_bodies(const char *path, const Body *src, int count, SimMode source_mode, float dt, unsigned long steps_run) {
     FILE *f = fopen(path, "wb");
     if (!f) return false;
 
@@ -310,6 +315,7 @@ bool save_bodies(const char *path, const Body *src, int count, float dt, unsigne
     header.magic = SNAPSHOT_MAGIC;
     header.version = SNAPSHOT_VERSION;
     header.body_count = count;
+    header.source_mode = (int32_t)source_mode;
     header.dt = dt;
     header.steps_run = (uint64_t)steps_run;
 
@@ -330,10 +336,11 @@ bool save_bodies(const char *path, const Body *src, int count, float dt, unsigne
  *             the file's body count, up to MAX_BODIES.
  * @param count_out Set to the number of bodies read on success.
  * @param header_out If not NULL, receives the full snapshot header on
- *                    success.
+ *                    success, including the recorded source mode.
  * @return true on success. false if the file is missing, is not a valid
- *         scenario file, has an unsupported version, or has a body count
- *         out of range, in which case dest is left untouched.
+ *         scenario file, has an unsupported version, has a body count
+ *         out of range, or has an invalid source mode, in which case
+ *         dest is left untouched.
  */
 bool load_bodies(const char *path, Body *dest, int *count_out, SnapshotHeader *header_out) {
     FILE *f = fopen(path, "rb");
@@ -356,6 +363,11 @@ bool load_bodies(const char *path, Body *dest, int *count_out, SnapshotHeader *h
     }
     if (header.body_count < 0 || header.body_count > MAX_BODIES) {
         fprintf(stderr, "%s: body count %d out of range\n", path, header.body_count);
+        fclose(f);
+        return false;
+    }
+    if (header.source_mode < 0 || header.source_mode >= MODE_COUNT) {
+        fprintf(stderr, "%s: invalid source mode %d\n", path, header.source_mode);
         fclose(f);
         return false;
     }

@@ -26,7 +26,9 @@ static double now_seconds(void) {
  *            using opt->mode. The simulation is then advanced opt->steps
  *            times at fixed dt opt->dt, with progress printed every 10%
  *            of the run, before the resulting bodies are written to
- *            opt->out_path.
+ *            opt->out_path. The output file records opt->mode as its
+ *            source mode regardless of whether a scenario was generated
+ *            or loaded from opt->scenario_path.
  * @return 0 on success, 1 if the scenario could not be loaded or the
  *         result could not be written.
  */
@@ -61,7 +63,7 @@ int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_h
     double total_time = now_seconds() - start_time;
 
     const char *out_path = opt->out_path ? opt->out_path : "output.nbs";
-    if (!save_bodies(out_path, bodies, body_count, opt->dt, opt->steps)) {
+    if (!save_bodies(out_path, bodies, body_count, (SimMode)opt->mode, opt->dt, opt->steps)) {
         fprintf(stderr, "failed to write output: %s\n", out_path);
         return 1;
     }

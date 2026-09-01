@@ -8,8 +8,21 @@
 
 #define DEFAULT_SCREEN_WIDTH 1920
 #define DEFAULT_SCREEN_HEIGHT 1080
-#define TIME_SCALE 5.0f          // simulated days advanced per real second
-#define PHYSICS_SUBSTEP_DAYS 1.0f // max simulated days per integration step
+
+// simulated days advanced per (real) second
+#define SCENARIO_1_TIME_SCALE 5.0f  // black hole
+#define SCENARIO_2_TIME_SCALE 100.0f  // (random) planetary system
+#define SCENARIO_3_TIME_SCALE 100.0f  // Solar system
+
+static const float TIME_SCALE_BY_MODE[MODE_COUNT] = {
+    SCENARIO_1_TIME_SCALE,  // MODE_STARS_ORBITING_BLACKHOLE
+    SCENARIO_2_TIME_SCALE,  // MODE_PLANETS_ORBITING_STAR
+    SCENARIO_3_TIME_SCALE,  // MODE_SOLAR_SYSTEM
+    SCENARIO_1_TIME_SCALE,
+};
+
+// max simulated days per integration step
+#define PHYSICS_SUBSTEP_DAYS 1.0f
 
 int main(int argc, char *argv[]) {
     SetTraceLogLevel(LOG_WARNING);  // suppress the countless "INFO:" dumps on run
@@ -45,6 +58,7 @@ int main(int argc, char *argv[]) {
     bool paused = false;
     int startup_frame = 0;
     double total_simulated_days = 0.0;
+    SimMode custom_source_mode = MODE_PLANETS_ORBITING_STAR;  // fallback
     char info_text[128];
 
     Camera2D camera = { 0 };
@@ -88,6 +102,7 @@ int main(int argc, char *argv[]) {
             SnapshotHeader header;
             if (load_bodies(scenario_path, bodies, &count, &header)) {
                 mode = MODE_CUSTOM;
+                custom_source_mode = (SimMode)header.source_mode;
                 total_simulated_days = 0.0;
                 body_count = count;
             } else {
@@ -95,7 +110,7 @@ int main(int argc, char *argv[]) {
             }
         }
         if (IsKeyPressed(KEY_S)) {
-            if (save_bodies(scenario_path, bodies, body_count, 0.0f, 0)) {
+            if (save_bodies(scenario_path, bodies, body_count, mode, 0.0f, 0)) {
                 printf("saved current scenario to %s\n", scenario_path);
             }
         }
@@ -119,8 +134,9 @@ int main(int argc, char *argv[]) {
                 Vector2Subtract(mouseWorldBefore, mouseWorldAfter));
         }
 
+        SimMode time_scale_mode = (mode == MODE_CUSTOM) ? custom_source_mode : mode;
         float real_dt = GetFrameTime();  // wall-clock time
-        float dt_days = real_dt * TIME_SCALE;
+        float dt_days = real_dt * TIME_SCALE_BY_MODE[time_scale_mode];
 
         /* Substepping bounds the simulated time covered by a single
         integration step to PHYSICS_SUBSTEP_DAYS, required for
