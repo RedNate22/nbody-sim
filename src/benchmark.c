@@ -79,15 +79,16 @@ static Body diff_bodies_a[MAX_BODIES];
 static Body diff_bodies_b[MAX_BODIES];
 
 /**
- * Compares two saved result files body by body.
+ * Compares two saved result files body by body, matched by id.
  *
  * @param opt Parsed options. opt->compare_a and opt->compare_b name the
  *            two files to load, opt->tol is the largest position
  *            difference allowed before a body is reported as failing.
- * @return 0 if both files loaded, had matching body counts, and every
- *         body's position difference was within opt->tol. 1 if either
- *         file failed to load, the body counts differ, or the tolerance
- *         was exceeded.
+ * @return 0 if both files loaded, had matching body counts, every id in
+ *         A was found in B, and every matched body's position difference
+ *         was within opt->tol. 1 if either file failed to load, the body
+ *         counts differ, a body id was out of range or unmatched, or the
+ *         tolerance was exceeded.
  */
 int run_diff(const CliOptions *opt) {
     int count_a, count_b;
@@ -111,13 +112,31 @@ int run_diff(const CliOptions *opt) {
             header_b.dt, (unsigned long long)header_b.steps_run);
     }
 
+    int id_to_index_b[MAX_BODIES];
+    for (int i = 0; i < MAX_BODIES; i++) id_to_index_b[i] = -1;
+    for (int j = 0; j < count_b; j++) {
+        int id = diff_bodies_b[j].id;
+        if (id < 0 || id >= MAX_BODIES) {
+            fprintf(stderr, "%s: body %d has out-of-range id %d\n", opt->compare_b, j, id);
+            return 1;
+        }
+        id_to_index_b[id] = j;
+    }
+
     float max_pos_delta = 0.0f;
     float max_vel_delta = 0.0f;
     bool within_tol = true;
 
     for (int i = 0; i < count_a; i++) {
         const Body *a = &diff_bodies_a[i];
-        const Body *b = &diff_bodies_b[i];
+
+        int id = a->id;
+        if (id < 0 || id >= MAX_BODIES || id_to_index_b[id] < 0) {
+            fprintf(stderr, "%s: body id %d not found in %s\n", opt->compare_a, id, opt->compare_b);
+            within_tol = false;
+            continue;
+        }
+        const Body *b = &diff_bodies_b[id_to_index_b[id]];
 
         float dpx = a->x - b->x;
         float dpy = a->y - b->y;
