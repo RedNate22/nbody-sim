@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
     init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
 
     bool paused = false;
+    int startup_frame = 0;
     char info_text[128];
 
     Camera2D camera = { 0 };
@@ -52,6 +53,12 @@ int main(int argc, char *argv[]) {
     const char *scenario_path = opt.scenario_path ? opt.scenario_path : SCENARIO_DEFAULT_PATH;
 
     while (!WindowShouldClose()) {
+        // prevents annoying bug where it maximizes to the wrong monitor
+        if (startup_frame < 10) {
+            if (startup_frame == 9) MaximizeWindow();
+            startup_frame++;
+        }
+
         if (IsKeyPressed(KEY_SPACE)) paused = !paused;
         if (IsKeyPressed(KEY_R)) {
             init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
@@ -155,7 +162,7 @@ int main(int argc, char *argv[]) {
             MODE_NAMES[mode], body_count, step_ms, paused ? "(PAUSED)" : "");
         DrawText(info_text, 10, 35, 20, RAYWHITE);
         DrawText("SPACE: pause   R: reset   1/2/3: switch scenario   4: custom scenario   S: save scenario",
-            10, screen_height - 30, 18, GRAY);
+            10, 60, 18, GRAY);
 
         EndDrawing();
     }

@@ -114,7 +114,7 @@ static void init_stars_orbiting_blackhole(float centerX, float centerY) {
             (STAR_DRAW_MAX - STAR_DRAW_MIN) * (mass - STAR_ORBIT_MASS_MIN) / (STAR_ORBIT_MASS_MAX - STAR_ORBIT_MASS_MIN);
         Color color = STAR_COLORS[rand() % STAR_COLOR_COUNT];
 
-        bodies[i] = (Body){ x, y, vx, vy, mass, draw_radius, color };
+        bodies[i] = (Body){ x, y, vx, vy, mass, 1.00, color };
     }
 
     body_count = MAX_BODIES;
