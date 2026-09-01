@@ -15,8 +15,6 @@ const char *MODE_NAMES[MODE_COUNT] = {
     "Custom Scenario"
 };
 
-/* Star colours: cool red/orange through white to hot blue-white.
-   Used for the central star and for the "stars orbiting a black hole" mode. */
 static const Color STAR_COLORS[] = {
     (Color){255, 180, 120, 255},  // cool orange
     (Color){255, 214, 170, 255},  // warm white
@@ -26,7 +24,6 @@ static const Color STAR_COLORS[] = {
 };
 #define STAR_COLOR_COUNT (sizeof(STAR_COLORS) / sizeof(STAR_COLORS[0]))
 
-/* Muted rock/gas colours for planets, distinct from the star palette. */
 static const Color PLANET_COLORS[] = {
     (Color){160, 160, 160, 255},  // grey rock
     (Color){200, 170, 120, 255},  // dusty tan
@@ -36,23 +33,19 @@ static const Color PLANET_COLORS[] = {
 };
 #define PLANET_COLOR_COUNT (sizeof(PLANET_COLORS) / sizeof(PLANET_COLORS[0]))
 
-#define ORBIT_MASS_MIN 1.0f
-#define ORBIT_MASS_MAX 400.0f
-#define STAR_ORBIT_MASS_MIN 50.0f
-#define STAR_ORBIT_MASS_MAX 600.0f
+#define ORBIT_MASS_MIN 1.0e-7f   // Mercury-equivalent
+#define ORBIT_MASS_MAX 1.0e-3f   // Jupiter-equivalent
 
-#define PLANET_DRAW_MIN 3.0f
-#define PLANET_DRAW_MAX 8.0f
+#define DISC_MASS_FRACTION 0.10f   // total disc mass, as a fraction of the central mass
+#define STAR_MASS_RAND_MIN 0.5f    // random spread around the mean star mass
+#define STAR_MASS_RAND_MAX 1.5f
+
 #define STAR_DRAW_MIN 1.0f
 #define STAR_DRAW_MAX 3.5f
 
-/* Fixed, order-preserving (not to-scale) layout for the solar system mode.
-   Real distances span ~75x from Mercury to Neptune, too wide a range to
-   render meaningfully at this window size without either crowding the
-   inner planets into a single blob or pushing the outer ones off-screen,
-   so distances here are compressed while keeping the correct ORDER.
-   Masses likewise preserve relative scale (gas giants >> terrestrials)
-   without matching real mass ratios exactly. */
+#define PLANET_DRAW_MIN 3.0f
+#define PLANET_DRAW_MAX 8.0f
+
 typedef struct {
     float distance;
     float mass;
@@ -61,28 +54,30 @@ typedef struct {
 } PlanetSpec;
 
 static const PlanetSpec SOLAR_SYSTEM_PLANETS[] = {
-    {  80.0f,   5.0f,  4.0f, (Color){169, 169, 169, 255} },  // Mercury
-    { 120.0f,  12.0f,  6.0f, (Color){230, 200, 150, 255} },  // Venus
-    { 160.0f,  15.0f,  6.5f, (Color){ 70, 130, 180, 255} },  // Earth
-    { 210.0f,   8.0f,  5.0f, (Color){193,  68,  14, 255} },  // Mars
-    { 320.0f, 800.0f, 16.0f, (Color){210, 180, 140, 255} },  // Jupiter
-    { 420.0f, 500.0f, 14.0f, (Color){230, 220, 170, 255} },  // Saturn
-    { 520.0f, 200.0f, 10.0f, (Color){175, 238, 238, 255} },  // Uranus
-    { 620.0f, 220.0f, 10.0f, (Color){ 60,  90, 200, 255} },  // Neptune
-    { 700.0f, 3.0f,   2.5f,  (Color){222, 202, 176, 255} },  // Pluto
+    /* distance: world units, 40 units = 1 AU
+    mass: real solar-mass fractions (Sol = 1.0) */
+    {  15.6f, 1.660e-7f,  4.0f, (Color){169, 169, 169, 255} },  // Mercury  (0.39 AU, 0.055 Earth masses)
+    {  28.8f, 2.447e-6f,  6.0f, (Color){230, 200, 150, 255} },  // Venus    (0.72 AU, 0.815 Earth masses)
+    {  40.0f, 3.003e-6f,  6.5f, (Color){ 70, 130, 180, 255} },  // Earth    (1.00 AU, 1.000 Earth masses)
+    {  60.8f, 3.213e-7f,  5.0f, (Color){193,  68,  14, 255} },  // Mars     (1.52 AU, 0.107 Earth masses)
+    { 208.0f, 9.543e-4f, 16.0f, (Color){210, 180, 140, 255} },  // Jupiter  (5.20 AU, 317.8 Earth masses)
+    { 383.2f, 2.857e-4f, 14.0f, (Color){230, 220, 170, 255} },  // Saturn   (9.58 AU, 95.2 Earth masses)
+    { 768.0f, 4.365e-5f, 10.0f, (Color){175, 238, 238, 255} },  // Uranus   (19.2 AU, 14.5 Earth masses)
+    {1204.0f, 5.150e-5f, 10.0f, (Color){ 60,  90, 200, 255} },  // Neptune  (30.1 AU, 17.1 Earth masses)
+    {1580.0f, 6.552e-9f,  2.5f, (Color){222, 202, 176, 255} },  // Pluto    (39.5 AU, 0.0022 Earth masses)
 };
 #define SOLAR_SYSTEM_PLANET_COUNT (sizeof(SOLAR_SYSTEM_PLANETS) / sizeof(SOLAR_SYSTEM_PLANETS[0]))
 
-/**
- * Computes the speed required for a stable circular orbit.
- *
- * @param centralMass Mass of the body being orbited.
- * @param radius Orbital radius.
- * @return Orbital speed, derived from G*M*m/r^2 = m*v^2/r with the
- *         orbiting body's own mass cancelling out.
- */
 static float orbital_speed(float centralMass, float radius) {
     return sqrtf(GRAV_CONST * centralMass / radius);
+}
+
+static int compare_dist2(const void *a, const void *b) {
+    const Body *ba = (const Body *)a;
+    const Body *bb = (const Body *)b;
+    float da = ba->x * ba->x + ba->y * ba->y;
+    float db = bb->x * bb->x + bb->y * bb->y;
+    return (da > db) - (da < db);
 }
 
 /**
@@ -96,28 +91,57 @@ static float orbital_speed(float centralMass, float radius) {
  * Sets body_count to MAX_BODIES.
  */
 static void init_stars_orbiting_blackhole(float centerX, float centerY) {
-    bodies[0] = (Body){ centerX, centerY, 0, 0, 150000.0f, 22.0f, (Color){25, 15, 35, 255} };
+    const float central_mass = 3000.0f;
+    bodies[0] = (Body){ 0.0f, 0.0f, 0, 0, central_mass, 22.0f, (Color){25, 15, 35, 255} };
 
-    for (int i = 1; i < MAX_BODIES; i++) {
-        float angle  = ((float)rand() / RAND_MAX) * 2.0f * PI;
-        float radius = 50.0f + ((float)rand() / RAND_MAX) * 400.0f;
+    const int star_count = MAX_BODIES - 1;
 
-        float x = centerX + cosf(angle) * radius;
-        float y = centerY + sinf(angle) * radius;
+    /* Mean star mass is derived from body count, not fixed, so total disc
+       mass stays a constant fraction of the central mass regardless of N.
+       Without this, more bodies means a proportionally heavier, less
+       stable disc instead of a smoother, more stable one. */
+    const float mean_star_mass = (DISC_MASS_FRACTION * central_mass) / (float)star_count;
 
-        float speed = orbital_speed(bodies[0].mass, radius);
-        float vx = -sinf(angle) * speed;
-        float vy =  cosf(angle) * speed;
+    const float inner_radius = 30.0f;
+    const float outer_radius = sqrtf((float)star_count) * 30.0f;
+    const float t2 = (inner_radius * inner_radius) / (outer_radius * outer_radius);
 
-        float mass = STAR_ORBIT_MASS_MIN + ((float)rand() / RAND_MAX) * (STAR_ORBIT_MASS_MAX - STAR_ORBIT_MASS_MIN);
+    for (int i = 1; i <= star_count; i++) {
+        float angle = ((float)rand() / RAND_MAX) * 2.0f * PI;
+
+        float r_frac = ((float)rand() / RAND_MAX) * (1.0f - t2) + t2;
+        float radius = outer_radius * sqrtf(r_frac);
+
+        float x = cosf(angle) * radius;
+        float y = sinf(angle) * radius;
+
+        float mass = mean_star_mass * (STAR_MASS_RAND_MIN +
+            ((float)rand() / RAND_MAX) * (STAR_MASS_RAND_MAX - STAR_MASS_RAND_MIN));
         float draw_radius = STAR_DRAW_MIN +
-            (STAR_DRAW_MAX - STAR_DRAW_MIN) * (mass - STAR_ORBIT_MASS_MIN) / (STAR_ORBIT_MASS_MAX - STAR_ORBIT_MASS_MIN);
+            (STAR_DRAW_MAX - STAR_DRAW_MIN) * (mass / mean_star_mass - STAR_MASS_RAND_MIN) /
+            (STAR_MASS_RAND_MAX - STAR_MASS_RAND_MIN);
         Color color = STAR_COLORS[rand() % STAR_COLOR_COUNT];
 
-        bodies[i] = (Body){ x, y, vx, vy, mass, 1.00, color };
+        bodies[i] = (Body){ x, y, 0.0f, 0.0f, mass, draw_radius, color };
     }
 
-    body_count = MAX_BODIES;
+    qsort(&bodies[1], star_count, sizeof(Body), compare_dist2);
+
+    float enclosed_mass = central_mass;
+    for (int i = 1; i <= star_count; i++) {
+        float r = sqrtf(bodies[i].x * bodies[i].x + bodies[i].y * bodies[i].y);
+        float speed = orbital_speed(enclosed_mass, r);
+        bodies[i].vx = -(bodies[i].y / r) * speed;
+        bodies[i].vy =  (bodies[i].x / r) * speed;
+        enclosed_mass += bodies[i].mass;
+    }
+
+    for (int i = 0; i <= star_count; i++) {
+        bodies[i].x += centerX;
+        bodies[i].y += centerY;
+    }
+
+    body_count = 1 + star_count;
 }
 
 /**
@@ -131,7 +155,7 @@ static void init_stars_orbiting_blackhole(float centerX, float centerY) {
  * it. Sets body_count to MAX_BODIES.
  */
 static void init_planets_orbiting_star(float centerX, float centerY) {
-    bodies[0] = (Body){ centerX, centerY, 0, 0, 50000.0f, 18.0f, (Color){255, 244, 214, 255} };
+    bodies[0] = (Body){ centerX, centerY, 0, 0, 1.0f, 18.0f, (Color){255, 244, 214, 255} };
 
     for (int i = 1; i < MAX_BODIES; i++) {
         float angle  = ((float)rand() / RAND_MAX) * 2.0f * PI;
@@ -167,7 +191,7 @@ static void init_planets_orbiting_star(float centerX, float centerY) {
  * one plus SOLAR_SYSTEM_PLANET_COUNT.
  */
 static void init_solar_system(float centerX, float centerY) {
-    bodies[0] = (Body){ centerX, centerY, 0, 0, 50000.0f, 22.0f, (Color){255, 244, 214, 255} };
+    bodies[0] = (Body){ centerX, centerY, 0, 0, 1.0f, 8.0f, (Color){255, 244, 214, 255} };
 
     for (int i = 0; i < (int)SOLAR_SYSTEM_PLANET_COUNT; i++) {
         const PlanetSpec *p = &SOLAR_SYSTEM_PLANETS[i];

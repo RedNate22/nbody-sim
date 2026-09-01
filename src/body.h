@@ -7,8 +7,13 @@
 
 #define MAX_BODIES 1200
 
-#define GRAV_CONST 6.674e-3f  // scaled up from the real G so motion is visible
-#define SOFTENING 5.0f        // prevents divide-by-near-zero at close range
+/* Units: distance 1 AU = 40 world units, time is in days.
+  GRAV_CONST is the real gravitational constant in AU^3/(Msun*day^2)
+  (the square of the Gaussian gravitational constant k=0.01720209895),
+  rescaled for world units as G_world = G_au * AU_TO_UNITS^3 */
+#define AU_TO_UNITS 40.0f
+#define GRAV_CONST 18.9384f
+#define SOFTENING 2.0f // ~0.05 AU
 
 #define SNAPSHOT_MAGIC 0x4E424F44u // 'NBOD'
 #define SNAPSHOT_VERSION 1u

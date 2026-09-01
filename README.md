@@ -10,7 +10,13 @@ Two bodies have an exact solution, an orbit shaped like an ellipse. Three or mor
 
 ## About nbody-sim
 
-This is a real time 2D gravitational simulator. Each frame, every body's combined gravitational pull on every other body is calculated directly, then used to update velocities and positions with simple Euler integration. Distances, masses, and the gravitational constant are all arbitrary units tuned for visible motion on screen rather than realistic scale, and a small softening term keeps the force from spiking when two bodies pass very close to each other.
+This is a real time 2D gravitational simulator. Each frame, every body's combined gravitational pull on every other body is calculated directly, then integrated forward with semi-implicit (symplectic) Euler integration.
+
+Distance is measured in world units (40 units = 1 AU), mass in solar masses, and time in simulated days, using the real gravitational constant for this unit system (the square of the Gaussian gravitational constant, rescaled for world-unit distances). Orbital periods and relative speeds match real physics. Rendered body radii are stylized for visibility rather than to scale, and a softening term caps the gravitational force at very close range for numerical stability.
+
+Real orbital periods range from 88 days (Mercury) to over 160 years (Neptune), so the interactive display advances simulated time faster than real time (`TIME_SCALE` in `main.c`).
+
+The stars-orbiting-a-black-hole scenario places bodies with uniform-by-area disc sampling and derives each body's orbital velocity from the mass enclosed within its orbit, rather than the central mass alone, with total disc mass scaled to body count. This keeps the scenario stable at high body counts, where orbiting mass is no longer negligible next to the central mass.
 
 ## Requirements
 
@@ -91,7 +97,7 @@ make run
 - Left click and drag: pan the camera
 - Scroll wheel: zoom in and out
 
-Hovering the mouse over any body shows its id, mass, position, and velocity.
+Hovering the mouse over any body shows its id, mass (in solar masses and Earth masses), position, and velocity. The top-left display also shows the current simulated day count.
 
 ## Command line usage
 
@@ -106,7 +112,7 @@ Any built-in scenario, or whatever is currently running in the interactive windo
 - `--headless`: run without opening a window
 - `--mode=N`: which built-in scenario to generate if no `--scenario` is given (0: stars orbiting a black hole, 1: planets orbiting a star, 2: solar system)
 - `--scenario=<path>`: load starting conditions from a saved `.nbs` file instead of generating one
-- `--dt=<value>`: fixed timestep for a headless run, independent of real time (default `1/60`)
+- `--dt=<value>`: fixed timestep for a headless run, in simulated days, independent of real time (default `1/60`)
 - `--steps=<n>`: number of fixed timesteps to run before saving (default `3600`)
 - `--out=<path>`: where to write the resulting bodies after the run (default `output.nbs`)
 - `--compare-a=<path>` and `--compare-b=<path>`: instead of running a simulation, load two result files and report the difference between them
