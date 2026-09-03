@@ -217,27 +217,54 @@ If the result is a FAIL, `dt=2` is too coarse for this scenario and is introduci
 
 ### Example: sensitivity to initial conditions
 
-The n-body problem is chaotic once there are more than two bodies with any real gravitational influence on each other, meaning two starts that differ by an immeasurably small amount can end up wildly different after enough time. This is a property of the physics, not a bug, and it's easy to see directly.
+The n-body problem is chaotic once there are more than two bodies with any real gravitational influence on each other, meaning two starts that differ by an immeasurably small amount can end up wildly different after enough time. This is a property of the physics.
 
-Save a scenario with several mutually interacting bodies, then run it twice with a barely different `dt`, close enough that the difference stands in for an imperceptibly different starting condition:
+Save a scenario with several mutually interacting bodies, then run it twice with a barely different `dt`, close enough that the difference stands in for an imperceptibly different starting condition. `steps` is adjusted between the two runs so both cover almost exactly the same span of simulated time (`dt * steps` differs by only 0.0001 days), so the comparison isolates the effect of the tiny `dt` difference rather than just measuring two snapshots taken at slightly different moments:
 
 ```shell
 ./nbody --headless --mode=0 --steps=0 --out=chaotic.nbs
-./nbody --headless --scenario=chaotic.nbs --dt=1      --steps=1000 --out=chaotic_a.nbs
-./nbody --headless --scenario=chaotic.nbs --dt=1.0001 --steps=1000 --out=chaotic_b.nbs
+./nbody --headless --scenario=chaotic.nbs --dt=1      --steps=10000 --out=chaotic_a.nbs
+./nbody --headless --scenario=chaotic.nbs --dt=1.0001 --steps=9999  --out=chaotic_b.nbs
 ./nbody --compare-a=chaotic_a.nbs --compare-b=chaotic_b.nbs --tol=1e-3
+```
+
+```
+max position delta: 599743
+max velocity delta: 92.9006
+FAIL: exceeded tolerance
 ```
 
 Now do the same with the solar system scenario, where the bodies are few and widely spaced:
 
 ```shell
 ./nbody --headless --mode=2 --steps=0 --out=solar.nbs
-./nbody --headless --scenario=solar.nbs --dt=1      --steps=1000 --out=solar_a.nbs
-./nbody --headless --scenario=solar.nbs --dt=1.0001 --steps=1000 --out=solar_b.nbs
+./nbody --headless --scenario=solar.nbs --dt=1      --steps=10000 --out=solar_a.nbs
+./nbody --headless --scenario=solar.nbs --dt=1.0001 --steps=9999  --out=solar_b.nbs
 ./nbody --compare-a=solar_a.nbs --compare-b=solar_b.nbs --tol=1e-3
 ```
 
-The solar system comparison should stay well within tolerance over this span, the orbits are regular enough that a tiny difference stays tiny. The black hole scenario, with many bodies in close proximity, is far more likely to FAIL the same tolerance over the same number of steps, because the close encounters between stars amplify small differences quickly. That divergence is expected and correct, it's the same reason long-term weather forecasting and long-term solar system forecasting both eventually break down. No amount of precision removes the sensitivity, it only delays when it shows up.
+```
+max position delta: 1.83307
+max velocity delta: 0.0696116
+FAIL: exceeded tolerance
+```
+
+While both report FAIL at `--tol=1e-3`, the actual scale of the divergence is comparatively very different. The solar system's max position delta comes out around 1.8 world units, which is driven by Mercury and Venus, the fastest moving bodies. These accumulate ordinary phase drift over roughly 113 Mercury orbits.
+
+Comparing this to the black hole scenario's max position delta comes out around 600,000 world units, which is several orders of magnitude larger than the entire scenario itself. This means the stars have ended up somewhere else entirely, rather than just nudged along their orbit.
+
+This is a key reason why long-term weather forecasting and long-term solar system forecasting both eventually break down over time -- no amount of precision removes this sensitivity, only delays it.
+
+Chaotic scenario
+```
+body id 2: position delta 599743 exceeds tolerance 0.001 <-- some poor, unfortunate body
+```
+
+Solar System scenario
+```
+body id 1: position delta 1.04244 exceeds tolerance 0.001 <-- Mercury
+body id 2: position delta 1.83307 exceeds tolerance 0.001 <-- Venus
+```
 
 ## Cleaning up build files
 
