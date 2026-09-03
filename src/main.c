@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     camera.target = (Vector2){ screen_width / 2.0f, screen_height / 2.0f };
     camera.offset = (Vector2){ screen_width / 2.0f, screen_height / 2.0f };
     camera.rotation = 0.0f;
-    camera.zoom = 1.0f;
+    camera.zoom = 0.5f;
 
     const char *scenario_path = opt.scenario_path ? opt.scenario_path : SCENARIO_DEFAULT_PATH;
 

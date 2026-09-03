@@ -134,12 +134,15 @@ Any built-in scenario, or whatever is currently running in the interactive windo
 
 - `--headless`: run without opening a window
 - `--mode=N`: which built-in scenario to generate if no `--scenario` is given, e.g. `--mode=0` (Stars Orbiting Black Hole)
+- `--bodies=<n>`: total body count to generate for mode 0 (Stars Orbiting Black Hole), up to `MAX_BODIES` (default `1200`); ignored by the other modes, which have a fixed body count
 - `--scenario=<path>`: load starting conditions from a saved `.nbs` file instead of generating one
 - `--dt=<value>`: fixed timestep for a headless run, in simulated days, independent of real time (default `1/60`)
 - `--steps=<n>`: number of fixed timesteps to run before saving (default `3600`)
-- `--out=<path>`: where to write the resulting bodies after the run (default `output.nbs`)
+- `--out=<path>`: where to write the resulting bodies after the run (default `scenario.nbs`)
 - `--compare-a=<path>` and `--compare-b=<path>`: instead of running a simulation, load two result files and report the difference between them
 - `--tol=<value>`: largest position difference allowed before `--compare-a`/`--compare-b` reports a failure (default `1e-3`)
+
+Regardless of if `--out` is specified or not, it will always save the output, so long as `--steps` is specified.
 
 #### dt
 

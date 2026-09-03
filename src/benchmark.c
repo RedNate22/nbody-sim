@@ -62,7 +62,7 @@ int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_h
 
     double total_time = now_seconds() - start_time;
 
-    const char *out_path = opt->out_path ? opt->out_path : "output.nbs";
+    const char *out_path = opt->out_path ? opt->out_path : "scenario.nbs";
     if (!save_bodies(out_path, bodies, body_count, (SimMode)opt->mode, opt->dt, opt->steps)) {
         fprintf(stderr, "failed to write output: %s\n", out_path);
         return 1;
