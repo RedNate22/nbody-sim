@@ -251,20 +251,18 @@ FAIL: exceeded tolerance
 
 While both report FAIL at `--tol=1e-3`, the actual scale of the divergence is comparatively very different. The solar system's max position delta comes out around 1.8 world units, which is driven by Mercury and Venus, the fastest moving bodies. These accumulate ordinary phase drift over roughly 113 Mercury orbits.
 
-Comparing this to the black hole scenario's max position delta comes out around 600,000 world units, which is several orders of magnitude larger than the entire scenario itself. This means the stars have ended up somewhere else entirely, rather than just nudged along their orbit.
-
-This is a key reason why long-term weather forecasting and long-term solar system forecasting both eventually break down over time -- no amount of precision removes this sensitivity, only delays it.
-
-Chaotic scenario
-```
-body id 2: position delta 599743 exceeds tolerance 0.001 <-- some poor, unfortunate body
-```
-
-Solar System scenario
 ```
 body id 1: position delta 1.04244 exceeds tolerance 0.001 <-- Mercury
 body id 2: position delta 1.83307 exceeds tolerance 0.001 <-- Venus
 ```
+
+Comparing this to the black hole scenario's max position delta comes out around 600,000 world units, which is several orders of magnitude larger than the entire scenario itself. This means the stars have ended up somewhere else entirely, rather than just nudged along their orbit.
+
+```
+body id 2: position delta 599743 exceeds tolerance 0.001 <-- some poor, unfortunate body
+```
+
+This is a key reason why long-term weather forecasting and long-term solar system forecasting both eventually break down over time -- no amount of precision removes this sensitivity, only delays it.
 
 ## Cleaning up build files
 
