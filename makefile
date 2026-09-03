@@ -5,7 +5,7 @@ SRC = $(wildcard src/*.c)
 OUT = nbody
 
 ifeq ($(OS),Windows_NT)
-	LDFLAGS = -lraylib -lopeng132 -lgdi32 -lwinmm
+	LDFLAGS = -lraylib -lopeng132 -lgdi32 -lwinmm -lpthread
 	RUN = $(OUT).exe
 else
 	LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11

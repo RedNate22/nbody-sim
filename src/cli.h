@@ -5,6 +5,7 @@ typedef struct {
     bool headless;
     bool compare;
     int mode;
+    int bodies;
     const char *scenario_path;
     const char *out_path;
     const char *compare_a;

@@ -42,7 +42,7 @@ int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_h
         }
         body_count = count;
     } else {
-        init_bodies((SimMode)opt->mode, screen_width / 2.0f, screen_height / 2.0f);
+        init_bodies((SimMode)opt->mode, screen_width / 2.0f, screen_height / 2.0f, opt->bodies);
     }
 
     unsigned long progress_interval = opt->steps / 10;
@@ -55,8 +55,8 @@ int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_h
 
         if ((i + 1) % progress_interval == 0 || i + 1 == opt->steps) {
             double elapsed = now_seconds() - start_time;
-            printf("step %lu / %lu (%.0f%%), %.2fs elapsed\n", i + 1, opt->steps,
-                100.0 * (double)(i + 1) / (double)opt->steps, elapsed);
+            printf("step %lu / %lu (%.0f%%), %d bodies, %.2fs elapsed\n", i + 1, opt->steps,
+                100.0 * (double)(i + 1) / (double)opt->steps, body_count, elapsed);
         }
     }
 

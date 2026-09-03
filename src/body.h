@@ -5,7 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MAX_BODIES 1200
+#define MAX_BODIES 20000
+#define DEFAULT_STAR_SCENARIO_BODY_COUNT 1200
 
 /* Units: distance 1 AU = 40 world units, time is in days.
   GRAV_CONST is the real gravitational constant in AU^3/(Msun*day^2)
@@ -52,7 +53,8 @@ extern const char *MODE_NAMES[MODE_COUNT];
 extern Body bodies[MAX_BODIES];
 extern int body_count; // how many entries in bodies[] are active this mode
 
-void init_bodies(SimMode mode, float centerX, float centerY);
+void init_bodies(SimMode mode, float centerX, float centerY,
+                 int requested_body_count);
 void update_bodies(float dt);
 void assign_ids(void);
 

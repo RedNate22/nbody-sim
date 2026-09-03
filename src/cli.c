@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cli.h"
+#include "body.h"
 
 /**
  * Checks whether arg matches the pattern "--flag=value".
@@ -33,6 +34,7 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
     opt->headless = false;
     opt->compare = false;
     opt->mode = 0;
+    opt->bodies = DEFAULT_STAR_SCENARIO_BODY_COUNT;
     opt->scenario_path = NULL;
     opt->out_path = NULL;
     opt->compare_a = NULL;
@@ -47,6 +49,8 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
             opt->headless = true;
         } else if (arg_value(argv[i], "--mode", &value)) {
             opt->mode = atoi(value);
+        } else if (arg_value(argv[i], "--bodies", &value)) {
+            opt->bodies = atoi(value);
         } else if (arg_value(argv[i], "--scenario", &value)) {
             opt->scenario_path = value;
         } else if (arg_value(argv[i], "--out", &value)) {

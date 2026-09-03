@@ -87,16 +87,23 @@ static int compare_dist2(const void *a, const void *b) {
  *
  * @param centerX X coordinate of the central black hole.
  * @param centerY Y coordinate of the central black hole.
+ * @param total_body_count Total number of bodies to generate, including
+ *                          the black hole. Clamped to [2, MAX_BODIES];
+ *                          values <= 0 default to MAX_BODIES.
  *
  * Fills bodies[0] with the black hole and every remaining slot up to
- * MAX_BODIES with a randomly placed star on a circular orbit around it.
- * Sets body_count to MAX_BODIES.
+ * total_body_count with a randomly placed star on a circular orbit
+ * around it. Sets body_count to total_body_count.
  */
-static void init_stars_orbiting_blackhole(float centerX, float centerY) {
+static void init_stars_orbiting_blackhole(float centerX, float centerY, int total_body_count) {
+    if (total_body_count <= 0) total_body_count = DEFAULT_STAR_SCENARIO_BODY_COUNT;
+    if (total_body_count > MAX_BODIES) total_body_count = MAX_BODIES;
+    if (total_body_count < 2) total_body_count = 2;
+
     const float central_mass = 3000.0f;
     bodies[0] = (Body){ 0.0f, 0.0f, 0, 0, central_mass, 22.0f, (Color){25, 15, 35, 255} };
 
-    const int star_count = MAX_BODIES - 1;
+    const int star_count = total_body_count - 1;
 
     /* Mean star mass is derived from body count, not fixed, so total disc
        mass stays a constant fraction of the central mass regardless of N.
@@ -234,11 +241,16 @@ void assign_ids(void) {
  *             separately with load_bodies.
  * @param centerX X coordinate to center the generated scenario on.
  * @param centerY Y coordinate to center the generated scenario on.
+ * @param requested_body_count Total body count to generate, for scenarios
+ *                              whose size isn't fixed (currently only
+ *                              MODE_STARS_ORBITING_BLACKHOLE). Values
+ *                              <= 0 use that scenario's default. Ignored
+ *                              by scenarios with a fixed body count.
  */
-void init_bodies(SimMode mode, float centerX, float centerY) {
+void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_count) {
     switch (mode) {
         case MODE_STARS_ORBITING_BLACKHOLE:
-            init_stars_orbiting_blackhole(centerX, centerY); 
+            init_stars_orbiting_blackhole(centerX, centerY, requested_body_count);
             break;
         case MODE_PLANETS_ORBITING_STAR:
             init_planets_orbiting_star(centerX, centerY);

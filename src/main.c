@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     SetTargetFPS(refresh_rate);
 
     SimMode mode = MODE_STARS_ORBITING_BLACKHOLE;
-    init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
+    init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f, 0);
 
     bool paused = false;
     int startup_frame = 0;
@@ -78,23 +78,23 @@ int main(int argc, char *argv[]) {
 
         if (IsKeyPressed(KEY_SPACE)) paused = !paused;
         if (IsKeyPressed(KEY_R)) {
-            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f, 0);
             total_simulated_days = 0.0;
         }
 
         if (IsKeyPressed(KEY_ONE)) {
             mode = MODE_STARS_ORBITING_BLACKHOLE;
-            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f, 0);
             total_simulated_days = 0.0;
         }
         if (IsKeyPressed(KEY_TWO)) {
             mode = MODE_PLANETS_ORBITING_STAR;
-            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f, 0);
             total_simulated_days = 0.0;
         }
         if (IsKeyPressed(KEY_THREE)) {
             mode = MODE_SOLAR_SYSTEM;
-            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f);
+            init_bodies(mode, screen_width / 2.0f, screen_height / 2.0f, 0);
             total_simulated_days = 0.0;
         }
         if (IsKeyPressed(KEY_FOUR)) {
