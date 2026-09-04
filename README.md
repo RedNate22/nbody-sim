@@ -141,6 +141,7 @@ Any built-in scenario, or whatever is currently running in the interactive windo
 - `--dt=<value>`: fixed timestep for a headless run, in simulated days, independent of real time (default `1/60`)
 - `--steps=<n>`: number of fixed timesteps to run before saving (default `3600`)
 - `--out=<path>`: where to write the resulting bodies after the run (default `scenario.nbs`)
+- `--print=<n>`: after the run finishes, print the id, final position, final velocity, mass, and total displacement from this run's starting position for up to `n` bodies (default: `0`, off)
 - `--compare-a=<path>` and `--compare-b=<path>`: instead of running a simulation, load two result files and report the difference between them
 - `--tol=<value>`: largest position difference allowed before `--compare-a`/`--compare-b` reports a failure (default `1e-3`)
 

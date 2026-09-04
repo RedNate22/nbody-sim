@@ -42,6 +42,7 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
     opt->dt = 1.0f / 60.0f;
     opt->steps = 3600;
     opt->tol = 1e-3f;
+    opt->print_count = 0;
 
     const char *value;
     for (int i = 1; i < argc; i++) {
@@ -67,7 +68,11 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
         } else if (arg_value(argv[i], "--compare-b", &value)) {
             opt->compare_b = value;
             opt->compare = true;
-        } else {
+        } else if (arg_value(argv[i], "--print", &value)) {
+            opt->print_count = atoi(value);
+        }
+        
+        else {
             fprintf(stderr, "unrecognized argument: %s\n", argv[i]);
         }
     }

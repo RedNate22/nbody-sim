@@ -13,6 +13,7 @@ typedef struct {
     float dt;
     unsigned long steps;
     float tol;
+    int print_count;
 } CliOptions;
 
 void parse_cli_options(int argc, char *argv[], CliOptions *opt);

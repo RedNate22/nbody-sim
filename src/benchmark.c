@@ -18,6 +18,9 @@ static double now_seconds(void) {
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
+static float start_x[MAX_BODIES];
+static float start_y[MAX_BODIES];
+
 /**
  * Runs the simulation with no window, for scripted or automated testing.
  *
@@ -28,7 +31,10 @@ static double now_seconds(void) {
  *            of the run, before the resulting bodies are written to
  *            opt->out_path. The output file records opt->mode as its
  *            source mode regardless of whether a scenario was generated
- *            or loaded from opt->scenario_path.
+ *            or loaded from opt->scenario_path. If opt->print_count is
+ *            greater than 0, prints the final id, position, velocity,
+ *            mass, and total displacement from this run's starting
+ *            position for up to that many bodies.
  * @return 0 on success, 1 if the scenario could not be loaded or the
  *         result could not be written.
  */
@@ -43,6 +49,13 @@ int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_h
         body_count = count;
     } else {
         init_bodies((SimMode)opt->mode, screen_width / 2.0f, screen_height / 2.0f, opt->bodies);
+    }
+
+    if (opt->print_count > 0) {
+        for (int i = 0; i < body_count; i++) {
+            start_x[i] = bodies[i].x;
+            start_y[i] = bodies[i].y;
+        }
     }
 
     unsigned long progress_interval = opt->steps / 10;
@@ -71,6 +84,19 @@ int run_headless_benchmark(const CliOptions *opt, int screen_width, int screen_h
     double steps_per_sec = total_time > 0.0 ? (double)opt->steps / total_time : 0.0;
     printf("ran %lu steps at dt=%g in %.3fs (%.1f steps/sec), wrote %d bodies to %s\n",
         opt->steps, opt->dt, total_time, steps_per_sec, body_count, out_path);
+
+    if (opt->print_count > 0) {
+        int n = opt->print_count < body_count ? opt->print_count : body_count;
+        printf("--- final state (%d of %d bodies) ---\n", n, body_count);
+        for (int i = 0; i < n; i++) {
+            float dx = bodies[i].x - start_x[i];
+            float dy = bodies[i].y - start_y[i];
+            float moved = sqrtf(dx * dx + dy * dy);
+            printf("id %d: pos (%.3f, %.3f)  vel (%.3f, %.3f)  mass %.3e  moved %.3f\n",
+                bodies[i].id, bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy,
+                bodies[i].mass, moved);
+        }
+    }
 
     return 0;
 }
