@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
             "%s   Bodies: %d   Physics step: %.2f ms   Day %.1f   %s",
             MODE_NAMES[mode], body_count, step_ms, total_simulated_days, paused ? "(PAUSED)" : "");
         DrawText(info_text, 10, 35, 20, RAYWHITE);
-        DrawText("SPACE: pause   R: reset   1/2/3: switch scenario   4: custom scenario   S: save scenario",
+        DrawText("SPACE: pause   R: reset   1/2/3: switch scenario   4: custom scenario   S: save scenario   Esc: Exit",
             10, 60, 18, GRAY);
 
         EndDrawing();

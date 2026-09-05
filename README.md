@@ -103,6 +103,7 @@ make
 - `S`: save whatever is currently running as the custom scenario file
 - Left click and drag: pan the camera
 - Scroll wheel: zoom in and out
+- `Esc`: exit
 
 Hovering the mouse over any body shows its id, mass (in solar masses and Earth masses), position, and velocity. The top-left display also shows the current simulated day count.
 
