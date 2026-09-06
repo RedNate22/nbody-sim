@@ -272,7 +272,8 @@ void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_
  *
  * Computes the combined gravitational acceleration on every body from
  * every other body by direct pairwise summation, then integrates
- * velocity and position forward using explicit Euler integration.
+ * velocity and position forward using semi-implicit (symplectic) Euler
+ * integration.
  */
 void update_bodies(float dt) {
     float ax[MAX_BODIES], ay[MAX_BODIES];
@@ -295,6 +296,11 @@ void update_bodies(float dt) {
         }
     }
 
+    /* Semi-implicit (symplectic) Euler:
+       v(t+dt) = v(t) + a(t)*dt
+       x(t+dt) = x(t) + v(t+dt)*dt
+       Position advanced via just-updated velocity v(t+dt) 
+       rather than v(t) */
     for (int i = 0; i < body_count; i++) {
         bodies[i].vx += ax[i] * dt;
         bodies[i].vy += ay[i] * dt;

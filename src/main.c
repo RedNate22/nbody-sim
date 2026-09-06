@@ -139,9 +139,9 @@ int main(int argc, char *argv[]) {
         float dt_days = real_dt * TIME_SCALE_BY_MODE[time_scale_mode];
 
         /* Substepping bounds the simulated time covered by a single
-        integration step to PHYSICS_SUBSTEP_DAYS, required for
-        numerical stability on short-period orbits (e.g. Mercury,
-        period 88 days) when TIME_SCALE or frame time is large. */
+           integration step to PHYSICS_SUBSTEP_DAYS, required for
+           numerical stability on short-period orbits (e.g. Mercury,
+           period 88 days) when TIME_SCALE or frame time is large. */
         double step_start = GetTime();
         if (!paused) {
             int substeps = (int)ceilf(dt_days / PHYSICS_SUBSTEP_DAYS);

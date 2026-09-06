@@ -71,7 +71,6 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
         } else if (arg_value(argv[i], "--print", &value)) {
             opt->print_count = atoi(value);
         }
-        
         else {
             fprintf(stderr, "unrecognized argument: %s\n", argv[i]);
         }
