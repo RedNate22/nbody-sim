@@ -2,7 +2,7 @@
 
 A gravitational N-body simulator, rendered in real time with raylib.
 
-<img width="2560" height="1380" alt="msrdc_tegOAeVu7U" src="https://github.com/user-attachments/assets/56fbc648-381f-4631-8faa-b36b05b209d3" />
+<img alt="n-body demo gif" src="https://github.com/user-attachments/assets/56fbc648-381f-4631-8faa-b36b05b209d3" />
 
 ## What is the N-body problem?
 
