@@ -266,7 +266,7 @@ Comparing this to the black hole scenario's max position delta comes out around 
 body id 2: position delta 599743 exceeds tolerance 0.001 <-- some poor, unfortunate body
 ```
 
-This is a key reason why long-term weather forecasting and long-term solar system forecasting both eventually break down over time -- no amount of precision removes this sensitivity, only delays it.
+This is a key reason why long-term weather forecasting and long-term solar system forecasting both eventually break down over time as no amount of precision removes this sensitivity, only delays it.
 
 ## Cleaning up build files
 
