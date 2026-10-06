@@ -57,7 +57,7 @@ This installs raylib into `/usr/local/lib` and `/usr/local/include`, which the M
 
 ```shell
 make
-./project
+./nbody
 ```
 
 ## Setup (Windows)
