@@ -4,13 +4,47 @@ A gravitational N-body simulator, rendered in real time with raylib.
 
 <img alt="n-body demo gif" src="https://github.com/user-attachments/assets/56fbc648-381f-4631-8faa-b36b05b209d3" />
 
-## What is the N-body problem?
+## Table of Contents
+
+- [1. What is the N-body problem?](#1-what-is-the-n-body-problem)
+- [2. About nbody-sim](#2-about-nbody-sim)
+- [3. Requirements](#3-requirements)
+- [4. Setup (Linux)](#4-setup-linux)
+	- [4.1 Install build tools](#41-install-build-tools)
+	- [4.2 Install raylib dependencies](#42-install-raylib-dependencies)
+	- [4.3 Install raylib](#43-install-raylib)
+	- [4.4 Build and run (Linux)](#44-build-and-run-linux)
+		- [4.4.1 Raylib (default)](#441-raylib-default)
+		- [4.4.2 No Raylib (no GUI)](#442-no-raylib-no-gui)
+- [5. Setup (Windows)](#5-setup-windows)
+	- [5.1 Install w64devkit](#51-install-w64devkit)
+	- [5.2 Install raylib](#52-install-raylib)
+	- [5.3 Build and run (Windows)](#53-build-and-run-windows)
+		- [5.3.1 Raylib (default)](#531-raylib-default)
+		- [5.3.2 No Raylib (no GUI)](#532-no-raylib-no-gui)
+- [6. Controls](#6-controls)
+	- [6.1 Scenarios](#61-scenarios)
+		- [6.1.1 Scenario 1 (Stars Orbiting Black Hole)](#611-scenario-1-stars-orbiting-black-hole)
+		- [6.1.2 Scenario 2 (Planets Orbiting Star)](#612-scenario-2-planets-orbiting-star)
+		- [6.1.3 Scenario 3 (Solar System)](#613-scenario-3-solar-system)
+		- [6.1.4 Scenario 4 (Custom Scenario)](#614-scenario-4-custom-scenario)
+- [7. Benchmarking (Custom Scenarios)](#7-benchmarking-custom-scenarios)
+	- [7.1 Scenario files](#71-scenario-files)
+	- [7.2 Flags](#72-flags)
+		- [7.2.1 dt](#721-dt)
+		- [7.2.2 steps](#722-steps)
+	- [7.3 Example: verifying a physics change](#73-example-verifying-a-physics-change)
+	- [7.4 Example: choosing a timestep](#74-example-choosing-a-timestep)
+	- [7.5 Example: sensitivity to initial conditions](#75-example-sensitivity-to-initial-conditions)
+- [8. Cleaning up build files](#8-cleaning-up-build-files)
+
+## 1. What is the N-body problem?
 
 "*The n-body problem is the problem of predicting the individual motions of a group of celestial objects interacting with each other gravitationally. Solving this problem has been motivated by the desire to understand the motions of the Sun, Moon, planets, and visible stars.*" - [Wikipedia (n-body problem)](https://en.wikipedia.org/wiki/N-body_problem)
 
 Two bodies have an exact solution, an orbit shaped like an ellipse. Three or more do not, so instead of solving for future positions directly, this simulator calculates the gravitational pull between every pair of bodies at each small timestep and nudges everything forward, repeating many times a second.
 
-## About nbody-sim
+## 2. About nbody-sim
 
 This is a real time 2D gravitational simulator. Each frame, every body's combined gravitational pull on every other body is calculated directly, then integrated forward with semi-implicit (symplectic) Euler integration.
 
@@ -18,29 +52,31 @@ Distance is measured in world units (40 units = 1 AU), mass in solar masses, and
 
 Real orbital periods range from 88 days (Mercury) to over 160 years (Neptune), so time is advanced faster than real time, at a pace set independently per scenario.
 
-## Requirements
+## 3. Requirements
 
 - GCC (or another C99 compiler)
 - make
 - git
-- raylib
+- raylib (not needed for the headless-only build)
 
-## Setup (Linux)
+## 4. Setup (Linux)
 
-### 1. Install build tools
+### 4.1 Install build tools
 
 ```shell
 sudo apt update
 sudo apt install build-essential git
 ```
 
-### 2. Install raylib dependencies
+### 4.2 Install raylib dependencies
+
+**Note:** if you wish to only ever run in headless mode (no GUI), skip to `4.4.2 No Raylib (no GUI)` 
 
 ```shell
 sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
 ```
 
-### 3. Install raylib
+### 4.3 Install raylib
 
 ```shell
 git clone --depth 1 https://github.com/raysan5/raylib.git raylib
@@ -53,22 +89,41 @@ rm -rf raylib
 
 This installs raylib into `/usr/local/lib` and `/usr/local/include`, which the Makefile in this repo expects.
 
-### 4. Build and run
+### 4.4 Build and run (Linux)
+
+#### 4.4.1 Raylib (default)
 
 ```shell
 make
 ./nbody
 ```
 
-## Setup (Windows)
+#### 4.4.2 No Raylib (no GUI)
+
+```shell
+make nbody_headless
+./nbody_headless --headless
+```
+
+Headless build requires `--headless` to run.
+
+Consider adding additional arguments to customise the headless run (see `7.2 Flags` section for full list of args):
+
+```shell
+./nbody_headless --headless --mode=0 --steps=100
+```
+
+## 5. Setup (Windows)
 
 The simplest path is w64devkit, a portable GCC and make environment bundled by the raylib author.
 
-### 1. Install w64devkit
+### 5.1 Install w64devkit
 
 Download the latest release from [w64devkit releases](https://github.com/skeeto/w64devkit/releases), extract it somewhere permanent (e.g. `C:\w64devkit`), and run `w64devkit.exe` to open its terminal. Use this terminal for all the steps below instead of PowerShell or cmd.
 
-### 2. Install raylib
+### 5.2 Install raylib
+
+**Note:** if you wish to only ever run in headless mode (no GUI), skip to `5.3.2 No Raylib (no GUI)` 
 
 Download the prebuilt raylib release matching your GCC version from [raylib releases](https://github.com/raysan5/raylib/releases), for example `raylib-5.5_win64_mingw-w64.zip`. Extract it and copy `include` and `lib` into the w64devkit install, or reference the paths directly in the Makefile.
 
@@ -80,21 +135,31 @@ cd raylib/src/
 make PLATFORM=PLATFORM_DESKTOP
 ```
 
-### 3. Build and run
+### 5.3 Build and run (Windows)
 
-```shell
-make
-make run
-```
-
-or,
+#### 5.3.1 Raylib (default)
 
 ```shell
 make
 ./nbody
 ```
 
-## Controls
+#### 5.3.2 No Raylib (no GUI)
+
+```shell
+make nbody_headless
+./nbody_headless --headless
+```
+
+Headless build requires `--headless` to run.
+
+Consider adding additional arguments to customise the headless run (see `7.2 Flags` section for full list of args):
+
+```shell
+./nbody_headless --headless --mode=0 --steps=100
+```
+
+## 6. Controls
 
 - `SPACE`: pause or resume the simulation
 - `R`: reset the current scenario
@@ -107,33 +172,33 @@ make
 
 Hovering the mouse over any body shows its id, mass (in solar masses and Earth masses), position, and velocity. The top-left display also shows the current simulated day count.
 
-### Scenarios
+### 6.1 Scenarios
 
-#### Scenario 1 (Stars Orbiting Black Hole)
+#### 6.1.1 Scenario 1 (Stars Orbiting Black Hole)
 
 A single massive body (3000 solar masses, acting as a black hole) at the center, surrounded by enough stars to fill out `MAX_BODIES`. Stars are placed at random angles with radius density falling off as 1/r², so they thin out further from the center, and their combined mass is pinned to 10% of the central mass. Each star's orbital velocity accounts for the mass of every other star closer to the center, not just the central mass, so the disc behaves a bit like a real galactic bulge rather than a simple two-body system.
 
-#### Scenario 2 (Planets Orbiting Star)
+#### 6.1.2 Scenario 2 (Planets Orbiting Star)
 
 A single 1 solar mass star with 15 planets scattered at random angles and random distances (1.25-22.5 AU), each given a random mass between a Mercury-like 1e-7 and a Jupiter-like 1e-3 solar masses. Orbital velocities are circular based on the star's mass alone.
 
-#### Scenario 3 (Solar System)
+#### 6.1.3 Scenario 3 (Solar System)
 
 The Sun plus the 9 real planets (Mercury through Pluto), using real masses and real orbital distances converted to world units. Each planet starts at a random angle rather than its real position, but on a circular orbit at the correct distance, so orbital periods and relative spacing match reality even though the "date" doesn't correspond to anything real.
 
-#### Scenario 4 (Custom Scenario)
+#### 6.1.4 Scenario 4 (Custom Scenario)
 
 This scenario acts as a save/load slot. Press `S` to save whatever is currently running (any of the above, including one previously loaded this way) to `scenario.nbs`, and `4` to load it back. The file remembers which built-in scenario it came from, so the correct timescale is restored along with the bodies.
 
-## Benchmarking (Custom Scenarios)
+## 7. Benchmarking (Custom Scenarios)
 
 Running `./nbody` with no arguments opens the interactive window as above. A set of flags also let the simulation run headless, with no window at all, for scripted and reproducible runs.
 
-### Scenario files
+### 7.1 Scenario files
 
 Any built-in scenario, or whatever is currently running in the interactive window, can be saved to a `.nbs` file, a binary snapshot of every body's exact position, velocity, mass, and id. The file also records which scenario it was generated from, so loading it back resumes at that scenario's time scale. Loading that file back reproduces the exact same starting conditions, with no randomness and no precision loss from the save and load round trip. These files are a raw dump of memory, so they're tied to the compiler and machine that produced them and shouldn't be copied between different platforms (expect undefined behaviour otherwise).
 
-### Flags
+### 7.2 Flags
 
 - `--headless`: run without opening a window (default: `false`)
 - `--mode=N`: which built-in scenario to generate if no `--scenario` is given, (default: `--mode=0` (Stars Orbiting Black Hole))
@@ -148,15 +213,15 @@ Any built-in scenario, or whatever is currently running in the interactive windo
 
 If `--scenario` AND `--out` aren't specified, then default behaviour will result in saving the scenario to `scenario.nbs` after every run (so long as `--steps` IS specified, otherwise it will run forever and never save).
 
-#### dt
+#### 7.2.1 dt
 
 `dt` is how much simulated time passes per physics update, in days. Smaller is more accurate but slower to compute; larger is faster but less accurate, and can become unstable for bodies on fast, tight orbits if pushed too far.
 
-#### steps
+#### 7.2.2 steps
 
 `steps` is how many `dt`-sized jumps to run before stopping and saving. Total simulated time covered is `steps * dt` days.
 
-### Example: verifying a physics change
+### 7.3 Example: verifying a physics change
 
 If you wish to experiment with the force and integration calculations, for example switching to a different integrator (semi-implicit Euler to something like Verlet or Runge-Kutta), moving from the current O(n²) brute-force approach to something like Barnes-Hut, or just optimising the existing force calculation, this confirms the new version still produces the same physics as the old one.
 
@@ -187,7 +252,7 @@ Compare the two results:
 
 This reports the largest position and velocity difference between the two runs and whether it's within the given tolerance. Exact equality isn't expected if the change reorders any floating point summation, since floating point addition isn't perfectly associative, but the difference should stay small relative to the tolerance if the change preserves the same physics.
 
-### Example: choosing a timestep
+### 7.4 Example: choosing a timestep
 
 Useful when picking a `dt` for a scenario with fast, tight orbits (Mercury, or close binary stars), where too large a timestep will show visible drift or instability rather than just harmless rounding error.
 
@@ -219,7 +284,7 @@ Compare the two:
 
 If the result is a FAIL, `dt=2` is too coarse for this scenario and is introducing real error, not just floating point noise, and a smaller `dt` is needed. If it passes, `dt=2` is fine for this scenario and there's no need to pay for the extra steps a finer timestep would cost.
 
-### Example: sensitivity to initial conditions
+### 7.5 Example: sensitivity to initial conditions
 
 The n-body problem is chaotic once there are more than two bodies with any real gravitational influence on each other, meaning two starts that differ by an immeasurably small amount can end up wildly different after enough time. This is a property of the physics.
 
@@ -268,7 +333,7 @@ body id 2: position delta 599743 exceeds tolerance 0.001 <-- some poor, unfortun
 
 This is a key reason why long-term weather forecasting and long-term solar system forecasting both eventually break down over time as no amount of precision removes this sensitivity, only delays it.
 
-## Cleaning up build files
+## 8. Cleaning up build files
 
 ```shell
 make clean
