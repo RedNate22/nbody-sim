@@ -1,7 +1,14 @@
 #ifndef BODY_H
 #define BODY_H
 
+#ifdef NBODY_HEADLESS
+typedef struct {
+  unsigned char r, g, b, a;
+} Color;
+#define PI 3.14159265358979323846f
+#else
 #include "raylib.h"
+#endif
 #include <stdbool.h>
 #include <stdint.h>
 
