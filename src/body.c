@@ -265,35 +265,215 @@ void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_
     assign_ids();
 }
 
+/* Barnes-Hut quadtree. Space is split into a square that holds every body,
+   then each square is split into four smaller squares (quadrants) until
+   every square holds at most one body. Each square stores the total mass
+   inside it and the centre of that mass. When summing forces on a body,
+   a square that is far away compared to its width is treated as one lump
+   at its centre of mass instead of visiting every body inside it. */
+
+#define THETA 0.5f
+#define MAX_TREE_NODES (8 * MAX_BODIES)
+#define MAX_TREE_DEPTH 32
+
+typedef struct {
+    float cx, cy;   // centre of the square
+    float half;     // half the width of the square
+    float mass;     // total mass of every body inside square
+    float mx, my;   // centre of mass, a mass weighted sum until tree is built
+    int count;      // no. bodies inside square
+    int body;       // body index for a single body leaf, otherwise -1
+    int child[4];   // node indices, -1 if absent
+} TreeNode;
+
+/* Nodes live in one fixed array that is reused every step, children are
+   referenced by array index, so building the tree needs no malloc. */
+static TreeNode tree[MAX_TREE_NODES];
+static int tree_count;
+
+// creates an empty node for a square and returns its index in tree[]
+static int new_node(float cx, float cy, float half) {
+    if (tree_count >= MAX_TREE_NODES) {
+        fprintf(stderr, "quadtree node array is full (%d nodes)\n", MAX_TREE_NODES);
+        exit(1);
+    }
+
+    TreeNode *t = &tree[tree_count];
+    t->cx = cx;
+    t->cy = cy;
+    t->half = half;
+    t->mass = 0.0f;
+    t->mx = 0.0f;
+    t->my = 0.0f;
+    t->count = 0;
+    t->body = -1;
+    for (int q = 0; q < 4; q++) {
+        t->child[q] = -1;
+    }
+    return tree_count++;
+}
+
+// bit 0 is right of the centre, bit 1 is above it
+static int quadrant(const TreeNode *t, const Body *b) {
+    return (b->x >= t->cx ? 1 : 0) + (b->y >= t->cy ? 2 : 0);
+}
+
+// returns the index of quadrant q of node n, creating it on first use
+static int get_child(int n, int q) {
+    if (tree[n].child[q] < 0) {
+        float h = tree[n].half * 0.5f;
+        float cx = tree[n].cx + ((q & 1) ? h : -h);
+        float cy = tree[n].cy + ((q & 2) ? h : -h);
+        tree[n].child[q] = new_node(cx, cy, h);
+    }
+    return tree[n].child[q];
+}
+
+// places body b into the tree, splitting squares until it has its own
+static void tree_insert(int b) {
+    float m = bodies[b].mass;
+    int n = 0;
+    int depth = 0;
+
+    /* Walk down from the root square, adding the body's mass to every
+       square passed through, until the body reaches an empty square. */
+    for (;;) {
+        TreeNode *t = &tree[n];
+        t->count++;
+        t->mass += m;
+        t->mx += bodies[b].x * m;
+        t->my += bodies[b].y * m;
+
+        // square was empty, the body is stored here as a leaf
+        if (t->count == 1) {
+            t->body = b;
+            return;
+        }
+
+        // depth guard, bodies at (almost) the same position stay lumped in one node
+        if (depth >= MAX_TREE_DEPTH) {
+            t->body = -1;
+            return;
+        }
+
+        /* Square already held exactly one body, so that body is moved
+           down into the matching quadrant to make room for the new one. */
+        if (t->body >= 0) {
+            int old = t->body;
+            float old_mass = bodies[old].mass;
+            TreeNode *c = &tree[get_child(n, quadrant(t, &bodies[old]))];
+            c->count = 1;
+            c->mass = old_mass;
+            c->mx = bodies[old].x * old_mass;
+            c->my = bodies[old].y * old_mass;
+            c->body = old;
+            t->body = -1;
+        }
+
+        n = get_child(n, quadrant(t, &bodies[b]));
+        depth++;
+    }
+}
+
+// rebuilds the whole tree from the current body positions
+static void build_tree(void) {
+    tree_count = 0;
+    if (body_count <= 0) return;
+
+    // root square is the smallest square around every body
+    float min_x = bodies[0].x, max_x = bodies[0].x;
+    float min_y = bodies[0].y, max_y = bodies[0].y;
+    for (int i = 1; i < body_count; i++) {
+        if (bodies[i].x < min_x) min_x = bodies[i].x;
+        if (bodies[i].x > max_x) max_x = bodies[i].x;
+        if (bodies[i].y < min_y) min_y = bodies[i].y;
+        if (bodies[i].y > max_y) max_y = bodies[i].y;
+    }
+    float width = max_x - min_x;
+    if (max_y - min_y > width) width = max_y - min_y;
+
+    new_node((min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, width * 0.5f);
+    for (int i = 0; i < body_count; i++) {
+        tree_insert(i);
+    }
+
+    // convert the weighted sums to centres of mass
+    for (int n = 0; n < tree_count; n++) {
+        TreeNode *t = &tree[n];
+        if (t->body >= 0) {
+            t->mx = bodies[t->body].x;
+            t->my = bodies[t->body].y;
+        } else if (t->mass > 0.0f) {
+            t->mx /= t->mass;
+            t->my /= t->mass;
+        }
+    }
+}
+
+// sums the acceleration on body i by walking the tree from the root
+static void tree_accel(int i, float *ax_out, float *ay_out) {
+    float ax = 0.0f, ay = 0.0f;
+    
+    /* Squares still to visit, starting with the root. Each visited square
+       either adds its force or is replaced by its children. Every opened
+       square adds at most four children, so the stack never grows past
+       four per tree level. */
+    int stack[4 * (MAX_TREE_DEPTH + 1)];
+    int sp = 0;
+    stack[sp++] = 0;
+
+    while (sp > 0) {
+        const TreeNode *t = &tree[stack[--sp]];
+        float dx = t->mx - bodies[i].x;
+        float dy = t->my - bodies[i].y;
+        float dist2 = dx*dx + dy*dy;
+        bool is_leaf = t->child[0] < 0 && t->child[1] < 0 &&
+                       t->child[2] < 0 && t->child[3] < 0;
+
+        if (is_leaf) {
+            // a body exerts no force on itself
+            if (t->body == i) continue;
+        } else {
+            /* Square is too close for its contents to be treated as one
+               lump (width / distance is not below THETA), so its children
+               are visited instead. */
+            float width = 2.0f * t->half;
+            if (width * width >= THETA * THETA * dist2) {
+                for (int q = 0; q < 4; q++) {
+                    if (t->child[q] >= 0) stack[sp++] = t->child[q];
+                }
+                continue;
+            }
+        }
+
+        dist2 += SOFTENING*SOFTENING;
+        float dist = sqrtf(dist2);
+        float accel_scale = GRAV_CONST * t->mass / (dist2 * dist);
+        ax += dx * accel_scale;
+        ay += dy * accel_scale;
+    }
+
+    *ax_out = ax;
+    *ay_out = ay;
+}
+
 /**
  * Advances the simulation by one timestep.
  *
  * @param dt Size of the timestep to integrate over.
  *
- * Computes the combined gravitational acceleration on every body from
- * every other body by direct pairwise summation, then integrates
- * velocity and position forward using semi-implicit (symplectic) Euler
- * integration.
+ * Computes the combined gravitational acceleration on every body using a
+ * Barnes-Hut quadtree, where distant groups of bodies are summed as a
+ * single lump at their centre of mass (see THETA) and nearby bodies are
+ * summed individually, then integrates velocity and position forward
+ * using semi-implicit (symplectic) Euler integration.
  */
 void update_bodies(float dt) {
     float ax[MAX_BODIES], ay[MAX_BODIES];
 
+    build_tree();
     for (int i = 0; i < body_count; i++) {
-        ax[i] = 0.0f;
-        ay[i] = 0.0f;
-
-        for (int j = 0; j < body_count; j++) {
-            if (i == j) continue;
-
-            float dx = bodies[j].x - bodies[i].x;
-            float dy = bodies[j].y - bodies[i].y;
-            float dist2 = dx*dx + dy*dy + SOFTENING*SOFTENING;
-            float dist  = sqrtf(dist2);
-
-            float accel_scale = GRAV_CONST * bodies[j].mass / (dist2 * dist);
-            ax[i] += dx * accel_scale;
-            ay[i] += dy * accel_scale;
-        }
+        tree_accel(i, &ax[i], &ay[i]);
     }
 
     /* Semi-implicit (symplectic) Euler:
