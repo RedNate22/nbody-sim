@@ -4,9 +4,12 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <pthread.h>
+#include <time.h>
 
 Body bodies[MAX_BODIES];
 int body_count = 0;
+static int thread_count = 1;
 
 const char *MODE_NAMES[MODE_COUNT] = {
     "Stars Orbiting Black Hole",
@@ -266,6 +269,50 @@ void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_
 }
 
 /**
+ * Set the thread count, capping it at MAX_THREADS or a minimum of 1.
+ *
+ * @param count Number of threads. Clamped to [1, MAX_THEADS].
+ */
+void set_thread_count(int count) {
+    if (count < 1) count = 1;
+    if (count > MAX_THREADS) count = MAX_THREADS;
+    thread_count = count;
+}
+
+typedef struct {
+    int start, end;  // range of body indices [start, end) handled by 1 thread
+    float *ax, *ay;  // shared acceleration arrays
+} ForceRange;
+
+// pairwise force loop for one thread's range of bodies
+static void *compute_forces(void *arg) {
+    const ForceRange *r = (const ForceRange *)arg;
+
+    for (int i = r->start; i < r->end; i++) {
+        float ax = 0.0f;
+        float ay = 0.0f;
+
+        for (int j = 0; j < body_count; j++) {
+            if (i == j) continue;
+
+            float dx = bodies[j].x - bodies[i].x;
+            float dy = bodies[j].y - bodies[i].y;
+            float dist2 = dx*dx + dy*dy + SOFTENING*SOFTENING;
+            float dist = sqrtf(dist2);
+
+            float accel_scale = GRAV_CONST * bodies[j].mass / (dist2 * dist);
+            ax += dx * accel_scale;
+            ay += dy * accel_scale;
+        }
+
+        r->ax[i] = ax;
+        r->ay[i] = ay;
+    }
+
+    return NULL;
+}
+
+/**
  * Advances the simulation by one timestep.
  *
  * @param dt Size of the timestep to integrate over.
@@ -278,22 +325,32 @@ void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_
 void update_bodies(float dt) {
     float ax[MAX_BODIES], ay[MAX_BODIES];
 
-    for (int i = 0; i < body_count; i++) {
-        ax[i] = 0.0f;
-        ay[i] = 0.0f;
+    pthread_t threads[MAX_THREADS];
+    ForceRange ranges[MAX_THREADS];
 
-        for (int j = 0; j < body_count; j++) {
-            if (i == j) continue;
+    /* each thread gets an equal block of consecutive bodies, 
+       rounded up so none are missed */
+    int chunk = (body_count + thread_count - 1) / thread_count;
 
-            float dx = bodies[j].x - bodies[i].x;
-            float dy = bodies[j].y - bodies[i].y;
-            float dist2 = dx*dx + dy*dy + SOFTENING*SOFTENING;
-            float dist  = sqrtf(dist2);
+    for (int t = 0; t < thread_count; t++) {
+        int start = t * chunk;
+        int end = start + chunk;
+        if (start > body_count) start = body_count;
+        if (end > body_count) end = body_count;
 
-            float accel_scale = GRAV_CONST * bodies[j].mass / (dist2 * dist);
-            ax[i] += dx * accel_scale;
-            ay[i] += dy * accel_scale;
+        ranges[t] = (ForceRange) {
+            start, end, ax, ay
+        };
+
+        if (pthread_create(&threads[t], NULL, compute_forces, &ranges[t]) != 0) {
+            fprintf(stderr, "failed to create thread %d\n", t);
+            exit(1);
         }
+    }
+
+    // every acceleration must be known before any body moves
+    for (int t = 0; t < thread_count; t++) {
+        pthread_join(threads[t], NULL);
     }
 
     /* Semi-implicit (symplectic) Euler:

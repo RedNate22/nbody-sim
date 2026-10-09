@@ -13,6 +13,7 @@ typedef struct {
 #include <stdint.h>
 
 #define MAX_BODIES 20000
+#define MAX_THREADS 25
 #define DEFAULT_STAR_SCENARIO_BODY_COUNT 1200
 
 /* Units: distance 1 AU = 40 world units, time is in days.
@@ -63,6 +64,7 @@ extern int body_count; // how many entries in bodies[] are active this mode
 void init_bodies(SimMode mode, float centerX, float centerY,
                  int requested_body_count);
 void update_bodies(float dt);
+void set_thread_count(int count);
 void assign_ids(void);
 
 bool save_bodies(const char *path, const Body *src, int count,
