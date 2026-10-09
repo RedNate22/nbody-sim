@@ -210,6 +210,7 @@ Any built-in scenario, or whatever is currently running in the interactive windo
 - `--print=<n>`: after the run finishes, print the id, final position, final velocity, mass, and total displacement from this run's starting position for up to `n` bodies (default: `0`, off)
 - `--compare-a=<path>` and `--compare-b=<path>`: instead of running a simulation, load two result files and report the difference between them
 - `--tol=<value>`: largest position difference allowed before `--compare-a`/`--compare-b` reports a failure (default `1e-3`)
+- `--threads=<n>`: number of threads the force calculation is split across, up to `MAX_THREADS` (default `1`). **Only works on the `brute-force-parallel` branch**
 
 If `--scenario` AND `--out` aren't specified, then default behaviour will result in saving the scenario to `scenario.nbs` after every run (so long as `--steps` IS specified, otherwise it will run forever and never save).
 
