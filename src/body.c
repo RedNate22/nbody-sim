@@ -271,11 +271,14 @@ void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_
 /**
  * Set the thread count, capping it at MAX_THREADS or a minimum of 1.
  *
- * @param count Number of threads. Clamped to [1, MAX_THEADS].
+ * @param count Number of threads. Clamped to [1, MAX_THREADS].
  */
 void set_thread_count(int count) {
     if (count < 1) count = 1;
-    if (count > MAX_THREADS) count = MAX_THREADS;
+    if (count > MAX_THREADS) {
+	    fprintf(stderr, "warning: %d threads requested, capped at %d\n", count, MAX_THREADS);
+	    count = MAX_THREADS;
+    }
     thread_count = count;
 }
 

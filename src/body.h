@@ -13,7 +13,7 @@ typedef struct {
 #include <stdint.h>
 
 #define MAX_BODIES 20000
-#define MAX_THREADS 25
+#define MAX_THREADS 256
 #define DEFAULT_STAR_SCENARIO_BODY_COUNT 1200
 
 /* Units: distance 1 AU = 40 world units, time is in days.
