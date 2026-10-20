@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L
 #include "body.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -315,6 +316,36 @@ static void *compute_forces(void *arg) {
     return NULL;
 }
 
+static pthread_t workers[MAX_THREADS];
+static ForceRange ranges[MAX_THREADS];
+static pthread_barrier_t step_start, step_done;
+static bool workers_started = false;
+
+// worker loop: waits for a step to start, computes its block, waits for rest to finish
+static void *force_worker(void *arg) {
+    for (;;) {
+        pthread_barrier_wait(&step_start);
+        compute_forces(arg);
+        pthread_barrier_wait(&step_done);
+    }
+    return NULL;
+}
+
+static void start_workers(void) {
+    pthread_barrier_init(&step_start, NULL, thread_count);
+    pthread_barrier_init(&step_done, NULL, thread_count);
+
+    // main thread computes block 0 itself, start at 1
+    for (int t = 1; t < thread_count; t++) {
+        if (pthread_create(&workers[t], NULL, force_worker, &ranges[t]) != 0) {
+            fprintf(stderr, "failed to create thread %d\n", t);
+            exit(1);
+        }
+    }
+
+    workers_started = true;
+}
+
 /**
  * Advances the simulation by one timestep.
  *
@@ -328,8 +359,7 @@ static void *compute_forces(void *arg) {
 void update_bodies(float dt) {
     float ax[MAX_BODIES], ay[MAX_BODIES];
 
-    pthread_t threads[MAX_THREADS];
-    ForceRange ranges[MAX_THREADS];
+    if (!workers_started) start_workers();
 
     /* each thread gets an equal block of consecutive bodies, 
        rounded up so none are missed */
@@ -344,17 +374,11 @@ void update_bodies(float dt) {
         ranges[t] = (ForceRange) {
             start, end, ax, ay
         };
-
-        if (pthread_create(&threads[t], NULL, compute_forces, &ranges[t]) != 0) {
-            fprintf(stderr, "failed to create thread %d\n", t);
-            exit(1);
-        }
     }
 
-    // every acceleration must be known before any body moves
-    for (int t = 0; t < thread_count; t++) {
-        pthread_join(threads[t], NULL);
-    }
+    pthread_barrier_wait(&step_start);
+    compute_forces(&ranges[0]);
+    pthread_barrier_wait(&step_done);
 
     /* Semi-implicit (symplectic) Euler:
        v(t+dt) = v(t) + a(t)*dt
