@@ -22,7 +22,7 @@ $(OUT): $(GUI_SRC)
 	$(CC) $(CFLAGS) -o $(OUT) $(GUI_SRC) $(LDFLAGS)
 
 nbody_headless: $(HEADLESS_SRC)
-	$(CC) $(CFLAGS) -DNBODY_HEADLESS -o nbody_headless $(HEADLESS_SRC) -lm
+	$(CC) $(CFLAGS) -DNBODY_HEADLESS -o nbody_headless $(HEADLESS_SRC) -lm -pthread
 
 run: $(OUT)
 	$(RUN)

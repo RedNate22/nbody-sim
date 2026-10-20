@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
 
     CliOptions opt;
     parse_cli_options(argc, argv, &opt);
+    set_thread_count(opt.threads);
 
     if (opt.compare) {
         return run_diff(&opt);

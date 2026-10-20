@@ -15,6 +15,7 @@ typedef struct {
     unsigned long steps;
     float tol;
     int print_count;
+    int threads;
 } CliOptions;
 
 void parse_cli_options(int argc, char *argv[], CliOptions *opt);

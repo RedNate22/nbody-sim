@@ -1,12 +1,15 @@
+#define _POSIX_C_SOURCE 200809L
 #include "body.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <pthread.h>
 
 Body bodies[MAX_BODIES];
 int body_count = 0;
+static int thread_count = 1;
 
 const char *MODE_NAMES[MODE_COUNT] = {
     "Stars Orbiting Black Hole",
@@ -265,6 +268,20 @@ void init_bodies(SimMode mode, float centerX, float centerY, int requested_body_
     assign_ids();
 }
 
+/**
+ * Set the thread count, capping it at MAX_THREADS or a minimum of 1.
+ *
+ * @param count Number of threads. Clamped to [1, MAX_THREADS].
+ */
+void set_thread_count(int count) {
+    if (count < 1) count = 1;
+    if (count > MAX_THREADS) {
+	    fprintf(stderr, "warning: %d threads requested, capped at %d\n", count, MAX_THREADS);
+	    count = MAX_THREADS;
+    }
+    thread_count = count;
+}
+
 /* Barnes-Hut quadtree. Space is split into a square that holds every body,
    then each square is split into four smaller squares (quadrants) until
    every square holds at most one body. Each square stores the total mass
@@ -457,6 +474,57 @@ static void tree_accel(int i, float *ax_out, float *ay_out) {
     *ay_out = ay;
 }
 
+// bodies claimed per grab during the force walk
+#define WALK_CHUNK 16  
+
+static pthread_t workers[MAX_THREADS];
+static pthread_barrier_t step_start, step_done;
+static bool workers_started = false;
+static int next_body;               // first body not yet claimed this step
+static float *walk_ax, *walk_ay;    // this step's acceleration arrays
+
+/* claims small chunks of bodies until none are left, so threads that
+   get cheap bodies take more chunks instead of waiting on the others */
+static void walk_bodies(void) {
+    for (;;) {
+        int start = __atomic_fetch_add(&next_body, WALK_CHUNK, __ATOMIC_RELAXED);
+        if (start >= body_count) break;
+
+        int end = start + WALK_CHUNK;
+        if (end > body_count) end = body_count;
+
+        for (int i = start; i < end; i++) {
+            tree_accel(i, &walk_ax[i], &walk_ay[i]);
+        }
+    }
+}
+
+// worker loop: waits for a step to start, walks its share, waits for the rest to finish
+static void *walk_worker(void *arg) {
+    (void)arg;
+    for (;;) {
+        pthread_barrier_wait(&step_start);
+        walk_bodies();
+        pthread_barrier_wait(&step_done);
+    }
+    return NULL;
+}
+
+static void start_workers(void) {
+    pthread_barrier_init(&step_start, NULL, thread_count);
+    pthread_barrier_init(&step_done, NULL, thread_count);
+
+    // main thread walks too, start at 1
+    for (int t = 1; t < thread_count; t++) {
+        if (pthread_create(&workers[t], NULL, walk_worker, NULL) != 0) {
+            fprintf(stderr, "failed to create thread %d\n", t);
+            exit(1);
+        }
+    }
+
+    workers_started = true;
+}
+
 /**
  * Advances the simulation by one timestep.
  *
@@ -471,10 +539,17 @@ static void tree_accel(int i, float *ax_out, float *ay_out) {
 void update_bodies(float dt) {
     float ax[MAX_BODIES], ay[MAX_BODIES];
 
+    if (!workers_started) start_workers();
+
+    // the tree is built by this thread alone, before any walking starts
     build_tree();
-    for (int i = 0; i < body_count; i++) {
-        tree_accel(i, &ax[i], &ay[i]);
-    }
+    next_body = 0;
+    walk_ax = ax;
+    walk_ay = ay;
+
+    pthread_barrier_wait(&step_start);
+    walk_bodies();
+    pthread_barrier_wait(&step_done);
 
     /* Semi-implicit (symplectic) Euler:
        v(t+dt) = v(t) + a(t)*dt

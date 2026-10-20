@@ -43,6 +43,7 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
     opt->steps = 3600;
     opt->tol = 1e-3f;
     opt->print_count = 0;
+    opt->threads = 1;
 
     const char *value;
     for (int i = 1; i < argc; i++) {
@@ -70,6 +71,8 @@ void parse_cli_options(int argc, char *argv[], CliOptions *opt) {
             opt->compare = true;
         } else if (arg_value(argv[i], "--print", &value)) {
             opt->print_count = atoi(value);
+        } else if (arg_value(argv[i], "--threads", &value)) {
+            opt->threads = atoi(value);
         }
         else {
             fprintf(stderr, "unrecognized argument: %s\n", argv[i]);
